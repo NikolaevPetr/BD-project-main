@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f8f8;
+        }
+    
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+    
+        .tabs, .sub-tabs {
+            display: flex;
+            justify-content: center;
+            background-color: #333;
+            padding: 10px;
+        }
+    
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s ease;
+        }
+    
+        button:hover {
+            background-color: #45a049;
+        }
+    
+        .tab-content, .sub-tab-content {
+            display: none;
+        }
+
+         .center-container table.no-center {
+        margin: initial;
+    }
+    
+        input[type="checkbox"], input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+    
+        label {
+            display: block;
+            margin: 5px 0;
+            color: #333;
+        }
+    
+        .sub-tabs button {
+            background-color: #4CAF50;
+        }
+    
+        .sub-tabs button:hover {
+            background-color: #45a049;
+        }
+    
+        .action-buttons {
+            display: none;
+            justify-content: space-around;
+            margin-top: 10px;
+        }
+    
+        .action-buttons button {
+            background-color: #4CAF50;
+        }
+    
+        .action-buttons button:hover {
+            background-color: #45a049;
+        }
+    
+        table {
+    width: 100%; /* Установите ширину таблицы в 100% */
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 8px;
+    font-size: 1.30vmin;
+    background-color: #fff;
+}
+
+    
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #4CAF50;
+    color: #fff;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+td:first-child, th:first-child {
+    border-top-left-radius: 8px;
+}
+
+td:last-child, th:last-child {
+    border-top-right-radius: 8px;
+}
+
+th:first-child {
+    border-bottom-left-radius: 8px;
+}
+
+th:last-child {
+    border-bottom-right-radius: 8px;
+}
+    
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ddd;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .sub-tab-content {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: auto;
+        }
+    
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+    
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+    
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .toast-common {
+    position: fixed;
+    width: 300px;
+    margin: 10px;
+    opacity: 0.85;
+    z-index: 9999;
+}
+
+.toast-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+
+.toast-title {
+    font-weight: bold;
+}
+
+.toast-message {
+    font-size: 14px;
+}
+
+.toast-success {
+    background-color: #4CAF50;
+    color: #fff;
+}
+
+.toast-error {
+    background-color: #D9534F;
+    color: #fff;
+}
+    </style>
+    
+    </style>
+    <title>Administrator Interface</title>
+</head>
+<body>
+
+    <div style="text-align: right; margin-top: 10px; margin-right: 10px;">
+        <a href="{{ url_for('logout') }}" style="color: white; background-color: #4CAF50; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Logout</a>
+    </div>
+    <h1>Administrator Interface</h1>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+        <button onclick="openTab('session')">Session</button>
+        <button onclick="openTab('orders')">Orders</button>
+        <button onclick="openTab('products')">Products</button>
+        <button onclick="openTab('prints')">Prints</button>
+        <button onclick="openTab('employees')">Employees</button>
+        <button onclick="openTab('stats')">Statistics</button>
+        <button onclick="openTab('Brend')">Brend</button>
+    </div>
+    
+    <div id="session" class="tab-content">
+        <div class="sub-tabs" id="sessionSubTabs">
+            <button onclick="openSubTab('restartAndDelete')">Restart Session</button>
+            <button onclick="openSubTab('stopAndPause')">Stop Session</button>
+            <button onclick="openSubTab('resumeAndContinue')">Resume Session</button>
+            <button onclick="openSubTab('deleteAllData')">Delete Session</button>
+        </div>
+    
+        <div id="restartAndDelete" class="sub-tab-content">
+            <form id="deleteAllOrdersForm">
+                <button onclick="confirmDeleteAllOrders()">Delete All Orders</button>
+            </form>
+        </div>
+        
+        <div id="stopAndPause" class="sub-tab-content">
+            <form id="deleteAllEmployeesForm">
+                <button onclick="confirmDeleteAllEmployees()">Delete All Employee</button>
+            </form>
+            <form id="pauseAllEmployeesForm">
+                <button onclick="pauseAllEmployees()">Pause status for all employees</button>
+            </form>
+        </div>
+        
+        <div id="resumeAndContinue" class="sub-tab-content">
+            <form id="resumeAndContinueForm">
+            <button onclick="updateStatusToNone()">Update Status for All Employees</button>
+            </form>
+        </div>
+    
+        <div id="deleteAllData" class="sub-tab-content">
+            <form id="deleteAllDataForm">
+                <button onclick="confirmDeleteAllData()">Delete All Data</button>
+            </form>
+        </div>
+    </div>
+    
+
+    <div id="orders" class="tab-content">
+        <!-- Sub-tabs for the "Orders" tab -->
+        <div class="sub-tabs" id="ordersSubTabs">
+            <button onclick="openSubTab('viewOrders')">View</button>
+            <button onclick="openSubTab('searchOrders')">Search</button>
+            <button onclick="openSubTab('changeStatusOrders')">Change Status</button>
+            <button onclick="openSubTab('deleteOrders')">Delete</button>
+            <button onclick="openSubTab('addOrder')">Add</button>
+        </div>
+        <!-- Content of sub-tabs for the "Orders" tab -->
+        <div id="viewOrders" class="sub-table-content">
+              <script>openSubTab('viewOrders');</script>
+        </div>
+
+        <div id="searchOrders" class="sub-table-content">
+            <!-- Code for searching orders by parameters -->
+            <form id="searchForm">
+                <input type="text" id="searchQuery" placeholder="Search by product parameters" required>
+                <input type="submit" value="Search">
+            </form>
+            
+            <!-- Content for displaying search results ОШИБКА  sub-tab-content -->
+            <div id="searchResults"></div>
+        </div>
+
+            <div id="changeStatusOrders" class="sub-tab-content"> 
+                <form id="changeStatusOrdersForm">
+                    <label for="orderId">Product ID:</label>
+                    <input type="number" id="orderId" placeholder="Enter product ID" required min="1">
+                
+                    <label for="newStatus">New Status:</label>
+                    <select id="newStatus" required>
+                        <option value="confirmation">confirmation</option>
+                        <option value="printing">printing</option>
+                        <option value="Print">print</option>
+                        <option value="Issuance">issue</option>
+                        <option value="canceled">CANCELED</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+            
+                    <input type="submit" value="Change Status">
+                </form>
+            </div>
+        <div id="deleteOrders" class="sub-tab-content">
+            <form id="deleteOrders">
+                <label for="orderIdToDelete">Order ID:</label>
+                <input type="number" id="orderIdToDelete" placeholder="Enter product ID" required min="1">
+                <input type="submit" value="Delete Order">
+                <button onclick="confirmDeleteAllOrders()">Delete All Orders</button>
+            </form>
+        </div>
+        <div id="addOrder" class="sub-tab-content">
+            <form id="addOrderForm">
+                <label for="clientName">Client Name:</label>
+                <input type="text" id="clientName" placeholder="Enter client name" required>
+        
+                <label for="clientContact">Client Contact:</label>
+                <input type="text" id="clientContact" placeholder="Enter client contact" required>
+        
+                <label for="model">Model:</label>
+                <input type="text" id="model" placeholder="Enter model" required>
+        
+                <label for="size">Size:</label>
+                <input type="text" id="size" placeholder="Enter size" required>
+        
+                <label for="color">Color:</label>
+                <input type="text" id="color" placeholder="Enter color" required>
+        
+                <label for="notificationMethod">Notification Method:</label>
+                <input type="text" id="notificationMethod" placeholder="Enter notification method" required>
+        
+                <label for="promoCode">Promo Code:</label>
+                <input type="text" id="promoCode" placeholder="Enter promo code">
+        
+                <label for="performer">Performer:</label>
+                <input type="text" id="performer" placeholder="Enter performer">
+        
+                <label for="printer">Printer:</label>
+                <input type="text" id="printer" placeholder="Enter printer">
+
+
+                <label for="issuance_manager">Issuance manager:</label>
+                <input type="text" id="issuance_manager" placeholder="Enter issuance manager">
+
+                <label for="reception_manager">Reception manager:</label>
+                <input type="text" id="reception_manager" placeholder="Enter reception manager">
+
+                <label for="status">Status:</label>
+                <select id="status" required>
+                    <option value="confirmation">Confirmation</option>
+                    <option value="printing">printing</option>
+                    <option value="Print">print</option>
+                    <option value="Issuance">Issuance</option>
+                    <option value="canceled">CANCELED</option>
+                    <option value="Completed">Completed</option>
+                </select>
+
+                <label for="frontImage">Front Image:</label>
+                <input type="text" id="frontImage" name="front_image" placeholder="URL or path">
+
+                <label for="backImage">Back Image:</label>
+                <input type="text" id="backImage" name="back_image" placeholder="URL or path">
+
+                <label for="printData">Print Data (JSON):</label>
+                <textarea id="printData" name="print_data" placeholder="JSON data"></textarea>
+        
+                <input type="submit" value="Add Order">
+            </form>
+        </div>
+    </div>
+
+    <div id="products" class="tab-content">
+        <!-- Sub-tabs for the "Products" tab -->
+        <div class="sub-tabs" id="productsSubTabs">
+            <button onclick="openSubTab('addProduct')">Add product</button>
+            <button onclick="openSubTab('addModel')">Add Model</button>
+            <button onclick="openSubTab('deleteProduct')">Delete product</button>
+            <button onclick="openSubTab('modifyProducts')">Modify Remaining Quantity Products</button>
+        </div>
+    
+        <!-- Content of sub-tabs for the "Products" tab -->
+        <div id="addProduct" class="sub-tab-content">
+            <!-- Form for adding a product -->
+            <form id="addProductForm">
+                <label for="productName">Product Name:</label>
+                <input type="text" id="productName" placeholder="Enter product name" required>
+    
+                <label for="productImageURL">Image URL:</label>
+                <input type="text" id="productImageURL" placeholder="Enter image URL" required>
+    
+                <input type="submit" value="Add Product">
+            </form>
+        </div>
+
+        <div id="addModel" class="sub-tab-content">
+            <form id="addModelForm">
+                <label for="productIdForModel">Product ID:</label>
+                <input type="text" id="productIdForModel" placeholder="Enter product ID" required>
+            
+                <label for="modelName">Model Name:</label>
+                <input type="text" id="modelName" placeholder="Enter model name" required>
+            
+                <label for="modelImageURL">Model Image URL:</label>
+                <input type="text" id="modelImageURL" placeholder="Enter model image URL" required>
+            
+                <label for="backImageModelURL">Back Image Model URL:</label>
+                <input type="text" id="backImageModelURL" placeholder="Enter back image model URL" required>
+            
+                <input type="submit" value="Add Model">
+            </form>
+        </div>
+    
+        <!-- Form for deleting a product and model in the same tab -->
+        <div id="deleteProduct" class="sub-tab-content">
+            <!-- Form for deleting a product -->
+            <form id="deleteProductForm" onsubmit="deleteProduct(); return false;">
+                <label for="productIdToDelete">Product ID to Delete:</label>
+                <input type="text" id="productIdToDelete" placeholder="Enter product ID" required min="1">
+                <button type="submit">Delete Product</button>
+            </form>
+    
+            <!-- Form for deleting a model -->
+            <form id="deleteModelForm" onsubmit="deleteModel(); return false;">
+                <label for="modelIdToDelete">Model ID to Delete:</label>
+                <input type="text" id="modelIdToDelete" placeholder="Enter model ID" required min="1">
+                <button type="submit">Delete Model</button>
+            </form>
+    
+            <!-- Form for deleting all products -->
+            <form id="deleteAllProductsForm" onsubmit="deleteAllProducts(); return false;">
+                <button type="submit">Delete All Products</button>
+            </form>
+    
+            <!-- Form for deleting all models -->
+            <form id="deleteAllModelsForm" onsubmit="deleteAllModels(); return false;">
+                <button type="submit">Delete All Models</button>
+            </form>
+        </div>
+    
+<!-- Form for modifying the remaining quantity of a product -->
+    <div id="modifyProducts" class="sub-tab-content">
+        <form id="modifyProduct">
+            <label for="productIdToModify">Product ID:</label>
+            <input type="text" id="productIdToModify" placeholder="Enter product ID" required min="1">
+
+            <label for="modelIdToModify">Model ID:</label>
+            <input type="text" id="modelIdToModify" placeholder="Enter model ID" required min="1">
+
+            <label for="sizeToModify">Size:</label>
+            <input type="text" id="sizeToModify" placeholder="Enter size (e.g., L, M, XL)" required>
+
+            <label for="quantityToModify">Modify Quantity:</label>
+            <input type="number" id="quantityToModify" placeholder="Enter quantity" required min="0">
+
+            <input type="submit" value="Modify Product Quantity">
+        </form>
+    </div>
+    </div>
+
+
+    <div id="prints" class="tab-content">
+        <!-- Sub-tabs for the "Prints" tab -->
+        <div class="sub-tabs" id="printsSubTabs">
+            <button onclick="openSubTab('addPrint')">Add print</button>
+            <button onclick="openSubTab('deletePrint')">Delete print</button>
+            <button onclick="openSubTab('modifyPrints')">Modify Remaining Quantity Prints</button>
+        </div>
+    
+        <!-- Content of sub-tabs for the "Prints" tab -->
+        <div id="addPrint" class="sub-tab-content">
+            <!-- Form for adding a print -->
+            <form id="addPrintForm">
+                <label for="printImageURL">Image URL:</label>
+                <input type="text" id="printImageURL" placeholder="Enter image URL" required>
+    
+                <label for="printQuantity">Remaining Quantity:</label>
+                <input type="number" id="printQuantity" placeholder="Enter remaining quantity" required min="0">
+    
+                <input type="submit" value="Add Print">
+            </form>
+        </div>
+    
+        <!-- Form for deleting a print -->
+        <div id="deletePrint" class="sub-tab-content">
+            <form id="deletePrintForm" onsubmit="deletePrint(); return false;">
+                <label for="printIdToDelete">Print ID to Delete:</label>
+                <input type="text" id="printIdToDelete" placeholder="Enter print ID" required min="1">
+                <button type="submit">Delete Print</button>
+            </form>
+    
+            <!-- Form for deleting all prints -->
+            <form id="deleteAllPrintsForm" onsubmit="deleteAllPrints(); return false;">
+                <button type="submit">Delete All Prints</button>
+            </form>
+        </div>
+    
+        <!-- Form for modifying the remaining quantity of a print -->
+        <div id="modifyPrints" class="sub-tab-content">
+            <form id="modifyPrintForm" onsubmit="modifyPrintQuantity(); return false;">
+                <label for="printIdToModify">Print ID:</label>
+                <input type="text" id="printIdToModify" placeholder="Enter print ID" required min="1">
+                <label for="quantityToModify_prints">Modify Quantity:</label>
+                <input type="number" id="quantityToModify_prints" placeholder="Enter quantity" required min="0">
+                <input type="submit" value="Modify Remaining Quantity">
+            </form>
+        </div>
+    </div>
+    
+    
+    <div id="employees" class="tab-content">
+        <!-- Sub-tabs for the "Employees" tab -->
+        <div class="sub-tabs" id="employeesSubTabs">
+            <button onclick="openSubTab('addEmployee')">Add</button>
+            <button onclick="openSubTab('deleteEmployee')">Delete</button>
+        </div>
+    
+        <!-- Content of sub-tabs for the "Employees" tab -->
+        <div id="addEmployee" class="sub-tab-content">
+            <!-- Form for adding an employee -->
+            <form id="addEmployeeForm">
+                <label for="employeeName">Employee Name:</label>
+                <input type="text" id="employeeName" placeholder="Enter employee name" required>
+    
+                <label for="employeePhone">Phone:</label>
+                <input type="tel" id="employeePhone" placeholder="Enter phone number" required>
+    
+                <label for="employeePassword">Password:</label>
+                <input type="password" id="employeePassword" placeholder="Enter password" required>
+    
+                <label for="employeeRole">Role:</label>
+                <select id="employeeRole" required>
+                    <option value="print">print</option>
+                    <option value="printing">Printing</option>
+                    <option value="issue">Issue</option>
+                    <option value="reception">Reception</option>
+                    <option value="administrator">Administrator</option>
+                </select>
+    
+                <input type="submit" value="Add Employee">
+            </form>
+        </div>
+    
+        <!-- Form for deleting an employee -->
+        <div id="deleteEmployee" class="sub-tab-content">
+            <form id="deleteEmployeeForm">
+                <label for="employeeIdToDelete">Employee ID to Delete:</label>
+                <input type="text" id="employeeIdToDelete" placeholder="Enter employee ID" required min="1">
+                <button type="submit">Delete Employee</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="stats" class="tab-content">
+        <!-- Sub-tabs for the "Stats" tab -->
+        <div class="sub-tabs" id="statsSubTabs">
+            <button onclick="openSubTab('allOrders')">Total Orders</button>
+            <button onclick="openSubTab('allQueue')">Current Queues</button>
+            <button onclick="openSubTab('metrics')">Metrics</button>
+            <button onclick="openSubTab('averageTime')">Average Time</button>
+        </div>
+    
+        <!-- Content of sub-tabs for the "Stats" tab -->
+        <div id="allOrders" class="sub-tab-content">
+            <h2>Total Information</h2>
+            <div id="allOrdersInfo"></div>
+        </div>
+        <div id="allQueue" class="sub-tab-content">
+            <h2>Total Information</h2>
+            <div id="allQueueInfo"></div>
+        </div>
+        <div id="metrics" class="sub-tab-content">
+            <h2>Metrics</h2>
+            <div id="metricsInfo"></div>
+        </div>
+        <div id="averageTime" class="sub-tab-content">
+            <h2>Average Time</h2>
+            <div id="averageTimeInfo"></div>
+        </div>
+    </div>
+
+    <div id="Brend" class="tab-content" style="padding: 20px; max-width: 400px; margin: auto;">
+        <form id="backgroundImageForm" style="text-align: center;">
+            <input type="file" id="fileInput" accept="image/*" style="margin-bottom: 10px;">
+            <button type="button" onclick="setBackgroundImage()" style="display: block; width: 100%; margin-bottom: 10px; height: 40px;">Set Background Image</button>
+            
+            <!-- Выравниваем выбор цвета и квадратик с цветом по высоте с кнопкой -->
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <input type="color" id="colorInput" onchange="updateColorPreview()" style="height: 40px; border: 1px solid #ccc; margin-right: 10px;">
+                <div id="colorPreview" style="width: 40px; height: 40px; border: 1px solid #000; margin-top: -10px;"></div>
+            </div>
+            <button type="button" onclick="setBackgroundColor()" style="display: block; width: 100%; height: 40px;">Set Background Color</button>
+        </form>
+    </div>
+    
+    <script>
+
+const commonOptions = {
+    positionClass: 'toast-top-right',
+    progressBar: true,
+    timeOut: 5000,
+    closeButton: true,
+    tapToDismiss: false,
+    newestOnTop: false,
+    showDuration: 300,
+    hideDuration: 1000,
+    titleClass: 'toast-title',
+    messageClass: 'toast-message'
+};
+
+function openSubTab(subTabName) {
+    var subTab = document.getElementById(subTabName);
+    var subTabs = document.getElementsByClassName("sub-tab-content");
+    var subTables = document.getElementsByClassName("sub-table-content");
+
+    // Закрываем все подвкладки, кроме выбранной
+    for (var i = 0; i < subTabs.length; i++) {
+        if (subTabs[i] !== subTab) {
+            subTabs[i].style.display = "none";
+        }
+    }
+
+    // Закрываем все таблицы, кроме выбранной
+    for (var i = 0; i < subTables.length; i++) {
+        if (subTables[i] !== subTab) {
+            subTables[i].style.display = "none";
+        }
+    }
+
+    // Переключаем видимость текущей подвкладки
+    subTab.style.display = subTab.style.display === "block" ? "none" : "block";
+
+    // Вызываем функцию для загрузки и отображения всех заказов при открытии подвкладки "Просмотр"
+    if (subTabName === 'viewOrders' && subTab.style.display === "block") {
+        loadOrders();
+    }
+}
+
+        function openTab(tabName) {
+            var tab = document.getElementById(tabName);
+            var tabs = document.getElementsByClassName("tab-content");
+
+                // Закрываем все вкладки, кроме выбранной
+                for (var i = 0; i < tabs.length; i++) {
+                    if (tabs[i] !== tab) {
+                        tabs[i].style.display = "none";
+                    }
+                }
+            
+                // Переключаем видимость текущей вкладки
+               tab.style.display = window.getComputedStyle(tab).display === "block" ? "none" : "block";
+
+        }
+
+
+        function confirmDeleteAllEmployees() {
+    var confirmDelete = confirm("Are you sure you want to remove all employees?");
+    if (confirmDelete) {
+        deleteAllEmployees();
+    }
+}
+
+function deleteAllEmployees() {
+    axios.post('/delete_all_employees')
+        .then(response => {
+            console.log(response.data);
+            toastr.success('<i class="toast-icon fas fa-check-circle"></i>All employees successfully deleted', 'Success', {
+                ...commonOptions,
+                iconClass: 'toast-success'
+            });
+        })
+        .catch(error => {
+            console.error(error.response.data);
+            toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error deleting all employees', 'Error', {
+                ...commonOptions,
+                iconClass: 'toast-error'
+            });
+        });
+}
+
+function pauseAllEmployees() {
+    event.preventDefault();
+    var confirmPause = confirm("Are you sure you want to set 'Pause' status for all employees?");
+    
+    if (confirmPause) {
+        axios.post('/pause_all_employees')
+            .then(response => {
+                console.log(response.data);
+                toastr.success('<i class="toast-icon fas fa-check-circle"></i>"Pause" status set successfully for all employees', 'Success', {
+                    ...commonOptions,
+                    iconClass: 'toast-success'
+                });
+            })
+            .catch(error => {
+                console.error(error.response.data);
+                toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error setting "Pause" status for all employees', 'Error', {
+                    ...commonOptions,
+                    iconClass: 'toast-error'
+                });
+            });
+    }
+}
+
+function updateStatusToNone() {
+    event.preventDefault();
+    var confirmUpdate = confirm("Are you sure you want to update the status to 'None' for all employees?");
+    
+    if (confirmUpdate) {
+        axios.post('/update_status')
+            .then(response => {
+                console.log(response.data);
+                toastr.success('<i class="toast-icon fas fa-check-circle"></i>Status updated to "None" successfully for all employees', 'Success', {
+                    ...commonOptions,
+                    iconClass: 'toast-success'
+                });
+            })
+            .catch(error => {
+                console.error(error.response.data);
+                toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error updating status to "None" for all employees', 'Error', {
+                    ...commonOptions,
+                    iconClass: 'toast-error'
+                });
+            });
+    }
+}
+
+
+function confirmDeleteAllData() {
+    event.preventDefault();
+    var confirmDelete = confirm("Are you sure you want to delete all data?");
+    
+    if (confirmDelete) {
+        axios.post('/delete_all_data')
+            .then(response => {
+                console.log(response.data);
+                toastr.success('<i class="toast-icon fas fa-check-circle"></i>All data successfully deleted', 'Success', {
+                    ...commonOptions,
+                    iconClass: 'toast-success'
+                });
+            })
+            .catch(error => {
+                console.error(error.response.data);
+                toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error deleting all data', 'Error', {
+                    ...commonOptions,
+                    iconClass: 'toast-error'
+                });
+            });
+    }
+}
+
+function setBackgroundImage() {
+    var fileInput = document.getElementById('fileInput');
+    var file = fileInput.files[0];
+    console.log("Файл", file)
+
+    var formData = new FormData();
+    if (file) {
+        formData.append('backgroundImage', file);
+    } else {
+        formData.append('useDefault', true);
+    }
+
+    fetch('/upload_background_image', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        toastr.success(data.message, 'Success');
+    })
+    .catch(error => {
+        toastr.error('An error occurred', 'Error');
+    });
+}
+
+function convertColorToBlob(color, callback) {
+    var canvas = document.createElement('canvas');
+    canvas.width = 100; // Устанавливаем ширину канваса в 10 пикселей
+    canvas.height = 100; // Устанавливаем высоту канваса в 10 пикселей
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 100, 100); // Заливаем всю область канваса выбранным цветом
+
+    // Преобразуем канвас в Blob (бинарные данные)
+    canvas.toBlob(function(blob) {
+        callback(blob);
+    }, 'image/png'); // Указываем формат Blob (в данном случае, PNG)
+}
+
+var colorChanged = false; // Добавляем флаг для отслеживания изменения цвета
+
+function updateColorPreview() {
+    var color = document.getElementById('colorInput').value;
+    document.getElementById('colorPreview').style.backgroundColor = color;
+    colorChanged = true; // Устанавливаем флаг как true при изменении цвета
+}
+
+function setBackgroundColor() {
+    var colorInput = document.getElementById('colorInput');
+    var selectedColor = colorInput.value;
+
+    // Проверяем, изменился ли цвет
+    if (colorChanged) {
+        convertColorToBlob(selectedColor, function(blob) {
+            var formData = new FormData();
+            formData.append('backgroundImage', blob, 'color.png');
+
+            fetch('/upload_background_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                toastr.success(data.message, 'Success');
+            })
+            .catch(error => {
+                toastr.error('An error occurred', 'Error');
+            });
+        });
+    } else {
+        // Если цвет не изменялся, устанавливаем дефолтный фон
+        var formData = new FormData();
+        formData.append('useDefault', true);
+
+        fetch('/upload_background_image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            toastr.success(data.message, 'Success');
+        })
+        .catch(error => {
+            toastr.error('An error occurred', 'Error');
+        });
+    }
+}
+
+
+        function loadOrders() {
+        axios.get('/fetch_orders')
+            .then(response => {
+                const orders = response.data;
+                const ordersContainer = document.getElementById('viewOrders');
+                const table = document.createElement('table');
+                table.border = '1';
+
+                // Указываем новый порядок столбцов
+                const columns = ['id', 'client_name', 'client_contact', 'model', 'size', 'color', 'notification_method', 'promo_code', 'performer', 'printer', 'status'];
+
+                // Заголовок таблицы
+                const headerRow = document.createElement('tr');
+                columns.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column;
+                    headerRow.appendChild(th);
+                });
+                table.appendChild(headerRow);
+
+                // Данные заказов
+                orders.forEach(product => {
+                    const row = document.createElement('tr');
+                    columns.forEach(column => {
+                        const td = document.createElement('td');
+                        td.textContent = product[column];
+                        row.appendChild(td);
+                    });
+                    table.appendChild(row);
+                });
+
+                ordersContainer.innerHTML = '';
+                ordersContainer.appendChild(table);
+            })
+            .catch(error => {
+                console.error('Error fetching orders:', error);
+            });
+    }
+
+// Функция для поиска заказов
+document.getElementById('searchForm').addEventListener('submit', function (event) {
+    event.preventDefault(); // Эта строка предотвращает стандартное поведение формы (перезагрузка страницы)
+    const searchQuery = document.getElementById('searchQuery').value;
+
+    // Вызываем функцию для загрузки и отображения результатов поиска
+    searchOrders(searchQuery);
+});
+
+
+function searchOrders(searchQuery) {
+    axios.get(`/search_orders?search_query=${searchQuery}`)
+        .then(response => {
+            const orders = response.data;
+            const searchResultsContainer = document.getElementById('searchResults');
+            const table = document.createElement('table');
+            table.border = '1';
+
+            // Указываем новый порядок столбцов
+            const columns = ['id', 'client_name', 'client_contact', 'model', 'size', 'color', 'notification_method', 'promo_code', 'performer', 'printer', 'status'];
+
+            // Заголовок таблицы
+            const headerRow = document.createElement('tr');
+            columns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+
+            // Данные заказов
+            orders.forEach(product => {
+                const row = document.createElement('tr');
+                columns.forEach(column => {
+                    const td = document.createElement('td');
+                    td.textContent = product[column];
+                    row.appendChild(td);
+                });
+                table.appendChild(row);
+            });
+
+            searchResultsContainer.innerHTML = '';
+            searchResultsContainer.appendChild(table);
+        })
+        .catch(error => {
+            console.error('Error searching orders:', error);
+        });
+}
+
+document.getElementById('changeStatusOrders').addEventListener('submit', function (event) {
+    event.preventDefault();
+    
+    // Получаем значения из формы
+    const orderId = document.getElementById('orderId').value;
+    const newStatus = document.getElementById('newStatus').value;
+ 
+    changeOrderStatus(orderId, newStatus);
+});
+
+function changeOrderStatus(orderId, newStatus) {
+    axios.post('/change_order_status', {
+        orderId: orderId,
+        newStatus: newStatus
+    })
+    .then(response => {
+        console.log(response.data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Order status successfully changed', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => {
+        console.error('Error changing order status:', error);
+        toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error changing order status', 'Error', {
+            ...commonOptions,
+            iconClass: 'toast-error'
+        });
+    });
+}
+
+// Функция для удаления отдельного заказа
+document.getElementById('deleteOrders').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const orderIdToDelete = document.getElementById('orderIdToDelete').value;
+        deleteOrder(orderIdToDelete);
+});
+
+    function confirmDeleteAllOrders() {
+    var confirmDelete = confirm("Are you sure you want to delete all orders?");
+    if (confirmDelete) {
+        deleteAllOrders();
+    }
+}
+
+function deleteAllOrders() {
+    axios.post('/delete_all_orders')
+        .then(response => {
+            console.log(response.data);
+            toastr.success('<i class="toast-icon fas fa-check-circle"></i>All orders successfully deleted', 'Success', {
+                ...commonOptions,
+                iconClass: 'toast-success'
+            });
+        })
+        .catch(error => {
+            console.error(error.response.data);
+            toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error deleting all orders', 'Error', {
+                ...commonOptions,
+                iconClass: 'toast-error'
+            });
+        });
+}
+
+// Функция для удаления отдельного заказа
+function deleteOrder(orderIdToDelete) {
+    axios.post('/delete_order', {
+            orderId: orderIdToDelete
+        })
+        .then(response => {
+            console.log(response.data);
+            toastr.success('<i class="toast-icon fas fa-check-circle"></i>Order successfully deleted', 'Success', {
+                ...commonOptions,
+                iconClass: 'toast-success'
+            });
+        })
+        .catch(error => {
+            console.error('Error deleting order:', error.response.data);
+            toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error deleting order', 'Error', {
+                ...commonOptions,
+                iconClass: 'toast-error'
+            });
+        });
+}
+
+    document.getElementById('addOrderForm').addEventListener('submit', function (event) {
+    event.preventDefault();  
+    
+    // Получаем значения из формы
+const clientName = document.getElementById('clientName').value;
+const clientContact = document.getElementById('clientContact').value;
+const model = document.getElementById('model').value;
+const size = document.getElementById('size').value;
+const color = document.getElementById('color').value;
+const notificationMethod = document.getElementById('notificationMethod').value;
+const promoCode = document.getElementById('promoCode').value;
+const performer = document.getElementById('performer').value;
+const printer = document.getElementById('printer').value;
+const issuanceManager = document.getElementById('issuance_manager').value;
+const receptionManager = document.getElementById('reception_manager').value;
+const status = document.getElementById('status').value;
+const frontImage = document.getElementById('frontImage').value;
+const backImage = document.getElementById('backImage').value;
+const printData = document.getElementById('printData').value;
+
+addOrder(clientName, clientContact, model, size, color, notificationMethod, promoCode, performer, printer, issuanceManager, receptionManager, status, frontImage, backImage, printData);
+});
+
+// Функция для добавления нового заказа
+// Функция для добавления заказа
+function addOrder(clientName, clientContact, model, size, color, notificationMethod, promoCode, performer, printer, issuanceManager, receptionManager, status, frontImage, backImage, printData) {
+    axios.post('/add_order', {
+            clientName: clientName,
+            clientContact: clientContact,
+            model: model,
+            size: size,
+            color: color,
+            notificationMethod: notificationMethod,
+            promoCode: promoCode,
+            performer: performer,
+            printer: printer,
+            issuanceManager: issuanceManager,
+            receptionManager: receptionManager,
+            status: status,
+            front_image: frontImage,
+            back_image: backImage,
+            print_data: printData
+        })
+        .then(response => {
+            console.log(response.data);
+            toastr.success('<i class="toast-icon fas fa-check-circle"></i>Order successfully added', 'Success', {
+                ...commonOptions,
+                iconClass: 'toast-success'
+            });
+        })
+        .catch(error => {
+            console.error('Error adding order:', error);
+            toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error adding order', 'Error', {
+                ...commonOptions,
+                iconClass: 'toast-error'
+            });
+        });
+}
+
+
+    document.getElementById('addProductForm').addEventListener('submit', function (event) {
+    event.preventDefault(); // Предотвращаем стандартное поведение формы (перезагрузка страницы)
+    // Получаем значения из формы
+    const productName = document.getElementById('productName').value;
+    const productImageURL = document.getElementById('productImageURL').value; 
+
+    // Вызываем функцию для отправки запроса на добавление изделия
+    addProduct(productName, productImageURL);
+});
+
+// Функция для добавления продукта
+function addProduct(productName, productImageURL) {
+    axios.post('/add_product', {
+            productName: productName,
+            productImageURL: productImageURL,
+        })
+        .then(response => {
+            console.log(response.data);
+            toastr.success('<i class="toast-icon fas fa-check-circle"></i>Product successfully added', 'Success', {
+                ...commonOptions,
+                iconClass: 'toast-success'
+            });
+        })
+        .catch(error => {
+            console.error('Error adding product:', error);
+            toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error adding product', 'Error', {
+                ...commonOptions,
+                iconClass: 'toast-error'
+            });
+        });
+}
+
+document.getElementById('addModelForm').addEventListener('submit', function (event) {
+    event.preventDefault(); // Предотвращаем стандартное поведение формы (перезагрузка страницы)
+
+    // Получаем значения из формы
+    const productIdForModel = document.getElementById('productIdForModel').value;
+    const modelName = document.getElementById('modelName').value;
+    const modelImageURL = document.getElementById('modelImageURL').value;
+    const backImageModelURL = document.getElementById('backImageModelURL').value;
+
+    // Вызываем функцию для отправки запроса на добавление модели
+    addModel(productIdForModel, modelName, modelImageURL, backImageModelURL);
+});
+
+// Функция для добавления модели
+function addModel(productIdForModel, modelName, modelImageURL, backImageModelURL) {
+    axios.post('/add_model', {
+            productIdForModel: productIdForModel,
+            modelName: modelName,
+            modelImageURL: modelImageURL,
+            backImageModelURL: backImageModelURL
+        })
+        .then(response => {
+            console.log(response.data);
+            toastr.success('<i class="toast-icon fas fa-check-circle"></i>Model successfully added', 'Success', {
+                ...commonOptions,
+                iconClass: 'toast-success'
+            });
+        })
+        .catch(error => {
+            console.error('Error adding model:', error);
+            toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error adding model', 'Error', {
+                ...commonOptions,
+                iconClass: 'toast-error'
+            });
+        });
+}
+
+
+function deleteProduct() {
+    var productIdToDelete = document.getElementById("productIdToDelete").value;
+
+    fetch('/delete_product', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            productId: productIdToDelete,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Product successfully deleted', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteModel() {
+    var modelIdToDelete = document.getElementById("modelIdToDelete").value;
+
+    fetch('/delete_model', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            modelId: modelIdToDelete,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Model successfully deleted', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+function deleteAllModels() {
+    fetch('/delete_all_models', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>All models deleted successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteAllProducts() {
+    fetch('/delete_all_products', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>All products deleted successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+    document.getElementById('modifyProduct').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const productIdToModify = document.getElementById('productIdToModify').value;
+    const modelIdToModify = document.getElementById('modelIdToModify').value;
+    const sizeToModify = document.getElementById('sizeToModify').value;
+    const quantityToModify = document.getElementById('quantityToModify').value;
+    
+
+    if (productIdToModify && modelIdToModify && sizeToModify && quantityToModify) {
+        modifyProductQuantity(productIdToModify, modelIdToModify, sizeToModify, quantityToModify);
+    }
+});
+
+function modifyProductQuantity(productId, modelId, size, quantity) {
+    axios.post('/modify_product_quantity', {
+        productId: productId,
+        modelId: modelId,
+        size: size,
+        quantity: quantity
+    })
+    .then(response => {
+        console.log(response.data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Product quantity modified successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => {
+        console.error('Error modifying product quantity:', error.response.data);
+        toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error modifying product quantity', 'Error', {
+            ...commonOptions,
+            iconClass: 'toast-error'
+        });
+    });
+}
+// Обработчик для формы добавления принта
+document.getElementById('addPrintForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const printImageURL = document.getElementById('printImageURL').value;
+        const printQuantity = document.getElementById('printQuantity').value;
+
+        // Вызываем функцию для отправки запроса на добавление принта
+        addPrint(printImageURL, printQuantity);
+    });
+
+    // Обработчик для формы удаления принта
+    function deletePrint() {
+    const printIdToDelete = document.getElementById("printIdToDelete").value;
+
+    fetch('/delete_print', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            printId: printIdToDelete,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Print deleted successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+    // Обработчик для формы удаления всех принтов
+    function deleteAllPrints() {
+    fetch('/delete_all_prints', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>All prints deleted successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+    // Обработчик для формы изменения оставшегося количества принта
+    function modifyPrintQuantity() {
+    const printIdToModify = document.getElementById('printIdToModify').value;
+    const quantityToModify_prints = document.getElementById('quantityToModify_prints').value;
+
+    if (printIdToModify && quantityToModify_prints) {
+        modifyPrint(printIdToModify, quantityToModify_prints);
+    }
+}
+
+    // Функция для отправки запроса на добавление принта
+    function addPrint(printImageURL, printQuantity) {
+    axios.post('/add_print', {
+        printImageURL: printImageURL,
+        printQuantity: printQuantity,
+    })
+    .then(response => {
+        console.log(response.data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Print added successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => {
+        console.error('Error adding print:', error);
+        toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error adding print', 'Error', {
+            ...commonOptions,
+            iconClass: 'toast-error'
+        });
+    });
+}
+
+ // Функция для отправки запроса на изменение оставшегося количества принта
+function modifyPrint(printIdToModify, quantityToModify) {
+    axios.post('/modify_print_quantity', {
+        printId: printIdToModify,
+        quantity: quantityToModify,
+    })
+    .then(response => {
+        console.log(response.data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Print quantity modified successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => {
+        console.error('Error modifying print quantity:', error.response.data);
+        toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error modifying print quantity', 'Error', {
+            ...commonOptions,
+            iconClass: 'toast-error'
+        });
+    });
+}
+
+
+    document.getElementById('addEmployeeForm').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    
+    // Получаем значения из формы
+    const name = document.getElementById('employeeName').value;
+        const phone = document.getElementById('employeePhone').value;
+        const role = document.getElementById('employeeRole').value;
+        const password = document.getElementById('employeePassword').value;
+        // Теперь 'hashedPassword' содержит хэшированный пароль
+        // Вызываем функцию для отправки запроса на добавление сотрудника
+        addEmployee(name, phone, password, role);
+    });
+
+// Обработчик для формы удаления сотрудника
+document.getElementById('deleteEmployeeForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    // Получаем значение из формы
+    const employeeIdToDelete = document.getElementById('employeeIdToDelete').value;
+    // Вызываем функцию для отправки запроса на удаление сотрудника
+    deleteEmployee(employeeIdToDelete);
+});
+
+// Функция для отправки запроса на добавление сотрудника
+async function addEmployee(name, phone, password, role) {
+    axios.post('/add_employee', {
+        name: name,
+        phone: phone,
+        password: password,
+        role: role
+    })
+    .then(response => {
+        console.log(response.data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Employee added successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => {
+        console.error('Error adding employee:', error);
+        toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error adding employee', 'Error', {
+            ...commonOptions,
+            iconClass: 'toast-error'
+        });
+    });
+}
+
+function deleteEmployee(employeeId) {
+    axios.post('/delete_employee', {
+        employee_id: employeeId
+    })
+    .then(response => {
+        console.log(response.data);
+        toastr.success('<i class="toast-icon fas fa-check-circle"></i>Employee deleted successfully', 'Success', {
+            ...commonOptions,
+            iconClass: 'toast-success'
+        });
+    })
+    .catch(error => {
+        console.error('Error deleting employee:', error.response.data);
+        toastr.error('<i class="toast-icon fas fa-times-circle"></i>Error deleting employee', 'Error', {
+            ...commonOptions,
+            iconClass: 'toast-error'
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    loadOrdersData('allOrders', '/get_orders_info', 'allOrdersInfo');
+    loadQueueData('allQueue', '/get_all_queues_info', 'allQueueInfo');
+});
+
+function loadOrdersData(subTabName, endpoint, infoElementId) {
+    var infoElement = document.getElementById(infoElementId);
+
+    fetch(endpoint)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Process and display data based on subTabName
+            if (!data) {
+                throw new Error(`Empty response for ${subTabName}`);
+            }
+
+            var orderCount;
+
+            // Extract data based on the subTabName
+            switch(subTabName) {
+                case 'allOrders':
+                    orderCount = data.total_orders;
+                    var processedOrders = data.processed_orders;
+                    var acceptedOrders = data.accepted_orders;
+                    var manufacturedPrints = data.manufactured_prints;
+                    var printedOrders = data.printed_orders;
+                    var issuedOrders = data.issued_orders;
+
+                    break;
+                default:
+                    console.error(`Unknown subTabName: ${subTabName}`);
+                    return;
+            }
+
+            if (orderCount === undefined || 
+                processedOrders === undefined || 
+                acceptedOrders === undefined || 
+                manufacturedPrints === undefined || 
+                printedOrders === undefined || 
+                issuedOrders === undefined) {
+                console.error(`Data for ${subTabName} is undefined`);
+            } else {
+                console.log(`Data loaded for ${subTabName}: ${orderCount}`);
+                infoElement.innerHTML = `
+                    <p>Total orders count: ${orderCount}</p>
+                    <p>Processed orders: ${processedOrders}</p>
+                    <p>Accepted orders: ${acceptedOrders}</p>
+                    <p>Manufactured prints: ${manufacturedPrints}</p>
+                    <p>Printed orders: ${printedOrders}</p>
+                    <p>Issued orders: ${issuedOrders}</p>
+                `;
+            }
+        })
+        .catch(error => console.error('Error fetching or processing data:', error));
+}
+
+// Function to load queue data
+function loadQueueData(subTabName, endpoint, infoElementId) {
+    var infoElement = document.getElementById(infoElementId);
+
+    fetch(endpoint)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(`Response for ${subTabName}:`, data);
+
+            if (!data) {
+                throw new Error(`Empty response for ${subTabName}`);
+            }
+
+            // Extract queue sizes from the response
+            var receptionQueue = data.reception_queue_size;
+            var applicationQueue = data.application_queue_size;
+            var printQueue = data.print_queue_size;
+            var issueQueue = data.issue_queue_size;
+
+            if (
+                receptionQueue === undefined || 
+                applicationQueue === undefined || 
+                printQueue === undefined || 
+                issueQueue === undefined
+            ) {
+                console.error(`Data for ${subTabName} is undefined`);
+            } else {
+                console.log(`Data loaded for ${subTabName}:`, data);
+                infoElement.innerHTML = `
+                    <p>Reception queue size: ${receptionQueue}</p>
+                    <p>Application queue size: ${applicationQueue}</p>
+                    <p>Print queue size: ${printQueue}</p>
+                    <p>Issue queue size: ${issueQueue}</p>
+                `;
+            }
+        })
+        .catch(error => console.error('Error fetching or processing data:', error));
+    }
+    
+// Вызов функций при загрузке вкладки
+document.addEventListener("DOMContentLoaded", function () {
+    loadMetrics();
+    loadAverageTime();
+});
+ // Функция для загрузки метрик
+ function loadMetrics() {
+    fetch('/calculate_metrics')
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            const employeesInfo = data.employees_info;
+
+            // Очищаем содержимое блока перед добавлением новой информации
+            document.getElementById('metricsInfo').innerHTML = '';
+
+            // Обрабатываем каждого сотрудника
+            employeesInfo.forEach(employee => {
+                const { name, role, items_per_hour } = employee;
+                const employeeInfoHTML = `<p>${name} (${role}): Items per hour: ${items_per_hour}</p>`;
+
+                // Добавляем информацию в блок
+                document.getElementById('metricsInfo').innerHTML += employeeInfoHTML;
+            });
+        })
+        .catch(error => console.error('Error loading metrics:', error));
+}
+
+
+    // Функция для загрузки среднего времени
+    function loadAverageTime() {
+        fetch('/calculate_average_time_per_item')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                const averageTimePerItem = data.average_time_per_item;
+                document.getElementById('averageTimeInfo').innerHTML = `<p>Average time per item: ${averageTimePerItem}</p>`;
+            })
+            .catch(error => console.error('Error loading average time:', error));
+    }
+
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!-- templates/select_product.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Your Product</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var splashScreen = document.getElementById("splash-screen");
+            var activityTimer;
+
+            function resetActivityTimer() {
+                clearTimeout(activityTimer);
+                activityTimer = setTimeout(showSplashScreen, 600000);  // После 10 минут бездействия показываем заставочный экран
+            }
+
+            function showSplashScreen() {
+                if (splashScreen) {
+                    splashScreen.style.display = "flex";
+                }
+            }
+
+            function hideSplashScreen() {
+                if (splashScreen) {
+                    splashScreen.style.display = "none";
+                }
+            }
+
+            // Сброс таймера при активности пользователя
+            document.addEventListener("mousemove", function() {
+                resetActivityTimer();
+                hideSplashScreen();  
+            });
+            document.addEventListener("keypress", function() {
+                resetActivityTimer();
+                hideSplashScreen();   
+            });
+
+            // Скрываем заставочный экран после загрузки страницы
+            hideSplashScreen();
+
+            // Первоначальный запуск таймера
+            resetActivityTimer();
+
+            // Добавляем обработчик события отправки формы
+            var form = document.querySelector('form');
+            form.addEventListener('submit', function(event) {
+                var selectedProduct = document.querySelector('input[name="selected_product"]:checked');
+
+                if (!selectedProduct) {
+                    alert('Please select a product before proceeding.');
+                    event.preventDefault();  
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_background_data')  // Запрос к серверу для получения данных о фоне
+        .then(response => response.json())
+        .then(data => {
+            if (data.backgroundImage) {
+                updateTextColorAndBackground(data.backgroundImage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    function updateTextColorAndBackground(imageSource) {
+    var img = new Image();
+    img.src = imageSource;
+
+    img.onload = function() {
+        applyTextColorBasedOnBackground(img);
+        document.body.style.backgroundImage = `url(${imageSource})`;
+        document.body.style.backgroundSize = '100% 100%'; // Растягиваем изображение на весь экран
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed'; // Зафиксируем изображение
+    };
+}
+
+    function applyTextColorBasedOnBackground(img) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var elements = [document.querySelector('h1'), document.querySelector('h2'), document.querySelector('h3')];
+        elements.forEach(function(element) {
+            if (element) {
+                var rect = element.getBoundingClientRect();
+                var x = rect.left + window.scrollX;
+                var y = rect.top + window.scrollY;
+                var pixel = ctx.getImageData(x, y, 1, 1).data;
+                var hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                element.style.color = getContrastYIQ(hex);
+            }
+        });
+    }
+
+    function rgbToHex(r, g, b) {
+        return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(1,2),16);
+        var g = parseInt(hexcolor.substr(3,2),16);
+        var b = parseInt(hexcolor.substr(5,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+    </script>
+</head>
+<body>
+    <!-- Заставочное изображение -->
+    <div id="splash-screen">
+        <img src="static/images/splash_image.jpg" alt="Splash Screen">
+    </div>
+
+    <!-- Добавим кнопку "Вход для сотрудника" -->
+    <a href="{{ url_for('login') }}" class="employee-login">Employee Entrance</a>
+
+    <!-- Остальной контент страницы -->
+    <div class="container">
+        <h1>Select Your Product</h1>
+        <form method="post" action="{{ url_for('select_model') }}">
+            {% if available_products|length == 1 %}
+                <!-- Если только один продукт доступен -->
+                <input type="hidden" name="selected_product" value="{{ available_products[0].name }}">
+                <p>Selected Product: {% if available_products[0].is_sold_out %}<strike>{{ available_products[0].name }} (не в наличии)</strike>{% else %}{{ available_products[0].name }}{% endif %}</p>
+            {% else %}
+                <!-- Если доступно несколько продуктов  -->
+                <div class="product-list">
+                    {% for product in available_products %}
+                        <label class="product">
+                            <input type="radio" name="selected_product" value="{{ product.name }}" {% if product.is_sold_out %}disabled{% endif %}>
+                            <div class="product-content">
+                                {% if product.is_sold_out %}
+                                    <!-- Перечеркиваем название продукта, если не в наличии -->
+                                    <img class="product-image sold-out" src="{{ product.image }}" alt="{{ product.name }}">
+                                    <p><strike>{{ product.name }} (не в наличии)</strike></p>
+                                {% else %}
+                                    <img class="product-image" src="{{ product.image }}" alt="{{ product.name }}">
+                                    <p>{{ product.name }}</p>
+                                {% endif %}
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <!-- Кнопка "назад" -->
+            <button type="submit" id="prevButton" style="display: none;">Prev</button>
+            <!-- Кнопка "вперед" -->
+            <button type="submit" id="nextButton">Next</button>
+        </form>
+    </div>
+</body>
+</html>

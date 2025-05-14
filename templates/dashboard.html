@@ -1,0 +1,166 @@
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+        <title>Dashboard</title>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                padding: 20px;
+            }
+
+            h1 {
+                color: #333;
+            }
+
+            table {
+    width: 100%; /* Установите ширину таблицы в 100% */
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 8px;
+    font-size: 1.35vmin;
+    background-color: #fff;
+}
+
+            th, td {
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+            }
+
+            th {
+                background-color: #4CAF50;
+                color: white;
+            }
+
+            tr:hover {
+                background-color: #f5f5f5;
+            }
+
+            .section-header {
+                margin-top: 40px;
+                margin-bottom: 20px;
+            }
+
+            .color-box {
+                width: 20px;
+                height: 20px;
+                display: inline-block;
+                margin-right: 5px;
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <h1>Dashboard</h1> 
+
+        <div class="section-header">
+            <h2>Ready Orders</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in ready_orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section-header">
+            <h3>Processing Orders</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in processing_orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_background_data')  // Запрос к серверу для получения данных о фоне
+        .then(response => response.json())
+        .then(data => {
+            if (data.backgroundImage) {
+                updateTextColorAndBackground(data.backgroundImage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    function updateTextColorAndBackground(imageSource) {
+    var img = new Image();
+    img.src = imageSource;
+
+    img.onload = function() {
+        applyTextColorBasedOnBackground(img);
+        document.body.style.backgroundImage = `url(${imageSource})`;
+        document.body.style.backgroundSize = '100% 100%'; // Растягиваем изображение на весь экран
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed'; // Зафиксируем изображение
+    };
+}
+
+    function applyTextColorBasedOnBackground(img) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var elements = [document.querySelector('h1'), document.querySelector('h2'), document.querySelector('h3')];
+        elements.forEach(function(element) {
+            if (element) {
+                var rect = element.getBoundingClientRect();
+                var x = rect.left + window.scrollX;
+                var y = rect.top + window.scrollY;
+                var pixel = ctx.getImageData(x, y, 1, 1).data;
+                var hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                element.style.color = getContrastYIQ(hex);
+            }
+        });
+    }
+
+    function rgbToHex(r, g, b) {
+        return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(1,2),16);
+        var g = parseInt(hexcolor.substr(3,2),16);
+        var b = parseInt(hexcolor.substr(5,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+        </script>
+         
+    </body>
+    </html>

@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Print</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lobster&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Контейнер для изображения выбранной модели и прямоугольника */
+        .selected-model {
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        #selected-side-display {
+        margin-top: 10px; /* Подстройте значение отступа по вашему вкусу */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    @keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.custom-text-panel {
+    animation: fadeIn 1s ease-in-out;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    padding: 20px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    z-index: 1000;
+}
+
+.prints-panel {
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 1s ease-in-out; /* Применение анимации fadeIn */
+}
+
+@media screen and (max-width: 600px) {
+    .custom-text-panel {
+        padding: 10px;
+    }
+
+    .prints-panel {
+        padding: 10px;
+    }
+
+    .prints-panel img {
+        max-width: 40px; /* Уменьшаем размер принтов для мобильных устройств */
+    }
+}
+
+.prints-carousel {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    margin-top: 20px;
+}
+
+/* Дополнительные стили для элементов внутри панели, если необходимо */
+.prints-panel label {
+    margin-bottom: 10px;
+}
+
+.prints-panel input,
+.prints-panel select {
+    margin-right: 10px;
+}
+    </style>
+</head>
+
+<body>
+    <!-- Основной контент страницы -->
+    <div class="container-customize">
+        <!-- Информация о выбранной модели -->
+        <div class="product-details">
+            <h1>{{ selected_model|replace("_", " ") |title}}</h1>
+            <!-- Контейнер для изображения выбранной модели и прямоугольника -->
+            <div class="selected-model">
+                <img id="img_top" src="{{ selected_model_image }}" alt="{{ selected_model }}">
+                <img id="img_back" src="{{ back_model_image }}" alt="{{ selected_model }} Back" style="display: none;">
+                <div class="rotate-container">
+                    <div class="rotate-icon" id="rotateIcon">&#8635;</div>
+                </div>
+                <div class="selection-rectangle" id="selectionRectangle"></div>
+                    <div id="selected-side-display">Front</div>
+                <!-- Контейнер для добавления текста -->
+            </div>
+        </div>
+        <!-- Панель настройки -->
+        <div class="customization-panel">
+            <!-- Информация о модели и размере -->
+            <div class="panel-info">
+                <h1>Preview Area</h1>
+                <div class="info-item">
+                    <strong>Size:</strong> {{ selected_size }}
+                </div>
+                <div class="info-item">
+                    <strong>Color:</strong>  <span id="selectedColorText"></span>
+                    <div id="colorSquare" class="color-square"></div> <!-- Новый элемент для отображения цветного квадрата -->
+                </div>
+                <div class="info-item">
+                <div id="rotationDisplay">Current angle: 0°</div>
+                </div>
+            </div>
+            
+            <!-- Кнопки действий -->
+            <div class="actions">
+                <button class="primary-btn" onclick="toggleSide()">Toggle Side</button>
+                <button class="primary-btn" onclick="togglePrintsPanel()">+ Print</button>
+                <button class="primary-btn" onclick="addCustomText()">+ Text</button>
+                <button class="primary-btn" onclick="clearRectangle()">Clear</button>
+            </div>            
+        </div>
+
+            <div class="navigation-buttons">
+                <div id="prevButton">Prev</div>
+                <button onclick="goToFinalStep()" id="nextButton">Next</button>
+            </div>
+       <!-- Панель с принтами -->
+       <div class="prints-panel" id="printsPanel">
+        <div class="prints-carousel" id="printsCarousel">
+            <!-- Контейнер для миниатюр принтов -->
+            <div class="prints-container" id="printsContainer">
+                {% for print in available_prints %}
+                    <label class="print" onclick="selectPrint('{{ print.name }}', '{{ print.image }}')">
+                        <img src="{{ print.image }}" alt="{{ print.name }}" class="print-thumbnail">
+                    </label>
+                {% endfor %}
+            </div>
+
+            <!-- Закрыть панель с принтами -->
+            <div class="close-btn" onclick="hidePrintsPanel()">✕</div>
+        </div>
+    </div>
+
+    <!-- Панель для своего текста -->
+    <div class="custom-text-panel" id="customTextPanel">
+        <div class="custom-text-header">
+            <div class="close-btn" onclick="hideCustomTextPanel()">✕</div>
+            <h1>Custom Text Settings</h1>
+        </div>
+        <div class="custom-text-inputs">
+            <label for="customTextInput">Custom Text:</label>
+            <input type="text" id="customTextInput" >
+            <label for="fontSize">Font Size:</label>
+            <input type="number" id="fontSize" min="1" value="16">
+            <label for="fontSelect">Font:</label>
+            <select id="fontSelect">
+                <option value="'Pacifico', cursive">Pacifico</option>
+                <option value="'Raleway', sans-serif">Raleway</option>
+                <option value="'EB Garamond', serif">EB Garamond</option>
+                <option value="'Lobster', cursive">Lobster</option>
+                <option value="'Quicksand', sans-serif">Quicksand</option>
+                <option value="'Poppins', sans-serif">Poppins</option>
+                <option value="'Montserrat', sans-serif">Montserrat</option>
+                <option value="'Open Sans', sans-serif">Open Sans</option>
+                <option value="'Roboto', sans-serif">Roboto</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Source Sans Pro', sans-serif">Source Sans Pro</option>
+            </select>
+            <label for="textColorPicker">Text Color:</label>
+            <input type="color" id="textColorPicker">
+        </div>
+        <div id="editable" contenteditable="true"></div>
+        <div class="custom-text-buttons">
+            <button onclick="applyCustomText()">Apply</button>
+            <button onclick="cancelCustomText()">Cancel</button>
+        </div>
+    </div>
+    
+    <script>
+    let selectionRectangle = document.getElementById('selectionRectangle');
+    let selectedModel = document.querySelector('.selected-model');
+    let isDragging = false;
+    let isResizing = false;
+    let resizeHandle;
+    let offsetX, offsetY;
+    let selectedPrintImage;
+    let selectedColor = '';
+    let imgTop = document.getElementById('img_top');
+    let imgBack = document.getElementById('img_back');
+    let currentSide = 'front';
+    function toggleSide() {
+    const selectedPrint = document.querySelector('.selection-rectangle');
+    const selectedSideDisplay = document.getElementById('selected-side-display');
+
+    if (currentSide === 'front') {
+        imgTop.style.display = 'none';
+        imgBack.style.display = 'block';
+        currentSide = 'back';
+        selectedSideDisplay.textContent = 'Back';
+    } else {
+        imgTop.style.display = 'block';
+        imgBack.style.display = 'none';
+        currentSide = 'front';
+        selectedSideDisplay.textContent = 'Front';
+    }
+     
+}
+
+    function getCurrentSide() {
+    // Возвращаем текущую сторону
+    return currentSide;  
+}
+
+    function movePrint(event) {
+        if (isDragging) {
+            let x = event.clientX - offsetX;
+            let y = event.clientY - offsetY;
+
+            x = Math.min(Math.max(x, 0), selectedModel.clientWidth - selectionRectangle.offsetWidth);
+            y = Math.min(Math.max(y, 0), selectedModel.clientHeight - selectionRectangle.offsetHeight);
+
+            selectionRectangle.style.left = x + 'px';
+            selectionRectangle.style.top = y + 'px';
+ 
+        } else if (isResizing) {
+            resizePrint(event);
+           
+        }
+    }
+    function resizePrint(event) {
+    const rect = selectionRectangle.getBoundingClientRect();
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+
+    let newWidth, newHeight;
+
+    switch (resizeHandle) {
+        case 'e':
+            newWidth = mouseX - rect.left;
+            newHeight = (newWidth / rect.width) * rect.height;
+            break;
+        case 's':
+            newHeight = mouseY - rect.top;
+            newWidth = (newHeight / rect.height) * rect.width; 
+            break;
+        case 'se':
+            newWidth = mouseX - rect.left;
+            newHeight = mouseY - rect.top;
+            break;
+        default:
+            break;
+    }
+
+    selectionRectangle.style.width = newWidth + 'px';
+    selectionRectangle.style.height = newHeight + 'px';
+
+    applyCustomText();
+}
+
+    function getBrightestColor(imageSrc) {
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; // Разрешает использование изображений с других доменов
+    img.src = imageSrc;
+
+    img.onload = function () {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        // Устанавливаем размеры canvas такими же, как у изображения
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Рисуем изображение на canvas
+        context.drawImage(img, 0, 0);
+
+        let brightestPixel = { r: 0, g: 0, b: 0 };
+        let maxBrightness = 0;
+
+        for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+                const pixelData = context.getImageData(x, y, 1, 1).data;
+                const brightness = (pixelData[0] + pixelData[1] + pixelData[2]) / 3;
+
+                if (brightness > maxBrightness) {
+                    brightestPixel = { r: pixelData[0], g: pixelData[1], b: pixelData[2] };
+                    maxBrightness = brightness;
+                }
+            }
+        }
+
+        // Формируем строку в формате RGB
+        const brightestColor = `rgb(${brightestPixel.r}, ${brightestPixel.g}, ${brightestPixel.b})`;
+        selectedColor = brightestColor;
+
+        // Выводим цвет на экран
+        displayColorOnScreen(brightestColor);
+    };
+}
+
+    function displayColorOnScreen(color) {
+        selectedColor = color;
+    // Обновляем текст в элементе с id "colorText"
+    const colorTextElement = document.getElementById('selectedColorText');
+    colorTextElement.textContent = selectedColor;
+    displayColorSquareOnScreen(color);
+}
+
+function displayColorSquareOnScreen(color) {
+    // Создаем элемент для отображения цветного квадрата
+    const colorSquare = document.getElementById('colorSquare');
+    
+    // Устанавливаем цвет фона через класс
+    colorSquare.style.backgroundColor = color;
+}
+
+const selectedModelImage = document.getElementById('img_top').src;
+getBrightestColor(selectedModelImage);
+
+function createResizeHandles() {
+    const resizeHandles = ['e', 's', 'se'];
+
+    resizeHandles.forEach(handle => {
+        const handleDiv = document.createElement('div');
+        handleDiv.classList.add('resize-handle', handle);
+        selectionRectangle.appendChild(handleDiv);
+    });
+
+    selectionRectangle.addEventListener('mouseenter', showResizeHandles);
+    selectionRectangle.addEventListener('mouseleave', hideResizeHandles);
+    selectionRectangle.addEventListener('mousedown', showResizeHandles);
+    document.addEventListener('mouseup', hideResizeHandles);
+}
+
+
+    function showResizeHandles() {
+        const resizeHandles = document.querySelectorAll('.resize-handle');
+        resizeHandles.forEach(handle => {
+            handle.style.display = 'block';
+        });
+    }
+
+    function hideResizeHandles() {
+        const resizeHandles = document.querySelectorAll('.resize-handle');
+        resizeHandles.forEach(handle => {
+            handle.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+        let initialX = (selectedModel.clientWidth - selectionRectangle.offsetWidth) / 2;
+        let initialY = (selectedModel.clientHeight - selectionRectangle.offsetHeight) / 2;
+
+        selectionRectangle.style.left = initialX + 'px';
+        selectionRectangle.style.top = initialY + 'px';
+        selectionRectangle.style.width = selectedModel.clientWidth * 0.15 + 'px';
+        selectionRectangle.style.height = selectedModel.clientHeight * 0.15 + 'px';
+        createResizeHandles();
+    });
+
+    selectionRectangle.addEventListener('mousedown', function (event) {
+        const isResizeHandle = event.target.classList.contains('resize-handle');
+        isResizing = isResizeHandle;
+        resizeHandle = isResizeHandle ? event.target.classList[1] : null;
+
+        isDragging = !isResizeHandle;
+
+        offsetX = event.clientX - selectionRectangle.offsetLeft;
+        offsetY = event.clientY - selectionRectangle.offsetTop;
+
+        document.addEventListener('mousemove', movePrint);
+        document.addEventListener('mouseup', function () {
+            isDragging = false;
+            isResizing = false;
+            document.removeEventListener('mousemove', movePrint);
+            document.removeEventListener('mouseup', arguments.callee);
+        });
+    });
+
+    function togglePrintsPanel() {
+        const printsPanel = document.getElementById('printsPanel');
+        printsPanel.style.display = 'block' ;
+
+        if (printsPanel.style.display === 'block') {
+            setTimeout(() => {
+                printsPanel.style.opacity = '1';
+            }, 50);
+        } else {
+            printsPanel.style.opacity = '0';
+        }
+    }
+
+    function hidePrintsPanel() {
+        const printsPanel = document.getElementById('printsPanel');
+        printsPanel.style.opacity = '0';
+        setTimeout(() => {
+            printsPanel.style.display = 'none';
+        }, 500);
+    }
+
+    function selectPrint(printName, printImagePath) {
+    const selectedPrint = document.querySelector('.selection-rectangle');
+
+    // Создаем новый объект Image
+    const img = new Image();
+    
+    // Устанавливаем путь к изображению
+    img.src = printImagePath;
+    
+    img.onload = function() {
+        selectedPrintImage = img; 
+        selectedPrint.style.backgroundImage = `url(${printImagePath})`;
+        selectedPrint.style.border = 'none';
+
+         // Вычисляем коэффициенты масштабирования для ширины и высоты
+    const widthScale = selectionRectangle.width / img.width;
+    const heightScale = selectionRectangle.height / img.height;
+
+    // Выбираем минимальный коэффициент, чтобы сохранить пропорции
+    const scale = Math.min(widthScale, heightScale);
+
+    // Устанавливаем размеры области в соответствии с изображением
+    selectedPrint.style.width = img.width * scale + 'px';
+    selectedPrint.style.height = img.height * scale + 'px';
+
+    // Выравниваем изображение по центру области
+    selectedPrint.style.backgroundSize = 'cover';
+    selectedPrint.style.backgroundPosition = 'center';
+        hidePrintsPanel();
+    };
+}
+
+function combineImages(baseImage, printImage, customTextElement, rotationAngle , customTextInfo) {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    // Устанавливаем размеры canvas такими же, как у контейнера
+    canvas.width = selectedModel.clientWidth;
+    canvas.height = selectedModel.clientHeight;
+
+    // Проверяем, что изображения полностью загружены
+    if (baseImage.complete && (!printImage || printImage.complete)) {
+        // Рисуем базовое изображение
+        context.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+
+        // Получаем размеры и координаты selectionRectangle
+        const selectionRect = {
+            left: parseInt(selectionRectangle.style.left),
+            top: parseInt(selectionRectangle.style.top),
+            width: parseInt(selectionRectangle.style.width),
+            height: parseInt(selectionRectangle.style.height) 
+        };
+
+        // Переводим и поворачиваем контекст для наложения принта
+        context.translate(selectionRect.left + selectionRect.width / 2, selectionRect.top + selectionRect.height / 2);
+        context.rotate((rotationAngle * Math.PI) / 180);
+        context.translate(-(selectionRect.left + selectionRect.width / 2), -(selectionRect.top + selectionRect.height / 2));
+        
+        // Рисуем изображение принта, если оно передано
+        if (printImage) {
+            context.drawImage(printImage, selectionRect.left, selectionRect.top, selectionRect.width, selectionRect.height);
+        }
+        // Рисуем текст на основном холсте (поверх принта), если он передан
+        if (customTextElement) {
+    // Получаем стили текста из объекта customTextInfo
+    const textStyles = {
+        fontFamily: customTextInfo.fontFamily,
+        fontSize: customTextInfo.fontSize + 'px',
+        fillStyle: customTextInfo.fontColor,
+        wordBreak: customTextInfo.wordBreak,
+        whiteSpace: customTextInfo.whiteSpace,
+        maxWidth: customTextInfo.maxWidth
+    };
+
+     
+    const paddingPercentage = 0.072; 
+
+// Вычисляем отступы как процент от размера прямоугольника
+const horizontalPadding = selectionRect.width * paddingPercentage;
+const verticalPadding = selectionRect.height * paddingPercentage;
+
+// Уменьшаем ширину rectangular с учетом отступов
+const newWidth = selectionRect.width - 2 * horizontalPadding;
+
+    // Устанавливаем стили напрямую через свойства контекста
+    context.font = `${textStyles.fontSize} ${textStyles.fontFamily}`;
+    context.fillStyle = textStyles.fillStyle;
+    context.wordBreak = textStyles.wordBreak;
+    context.whiteSpace = textStyles.whiteSpace;
+    context.maxWidth = textStyles.maxWidth;
+     
+    context.textBaseline = 'middle';
+    // Разбиваем текст на строки
+    const lines = customTextInfo.text.split('\n');
+
+    // Определяем начальные размеры для корректного переноса текста
+    let currentTop = selectionRect.top + (selectionRect.height - parseInt(textStyles.fontSize) * lines.length) / 2;
+    let currentHeight = selectionRect.height;
+
+lines.forEach(line => {
+    // Измеряем ширину строки
+    const lineWidth = context.measureText(line).width;
+
+    // Проверяем, помещается ли строка в текущую высоту
+    if (lineWidth > newWidth && currentHeight > 0) {
+        // Если не помещается, рисуем части строки с переносом на новую строку
+        let start = 0;
+        while (start < line.length) {
+            const remainingWidth = newWidth;
+            let end = start;
+            let partialLine = '';
+
+            // Поочередно добавляем символы к partialLine, пока не превысим remainingWidth
+            while (end < line.length && context.measureText(partialLine).width <= remainingWidth) {
+                partialLine += line[end];
+                end++;
+            }
+
+            // Рисуем partialLine на холсте
+            const partialLineWidth = context.measureText(partialLine).width;
+            const partialLineLeft = selectionRect.left +horizontalPadding;
+            context.fillText(partialLine, partialLineLeft, currentTop, newWidth);
+
+            // Обновляем текущую высоту
+            currentTop += parseInt(textStyles.fontSize);
+            currentHeight -= parseInt(textStyles.fontSize);
+
+            // Начинаем следующую часть строки
+            start = end;
+        }
+    } else {
+        // Если строка помещается в текущую высоту, рисуем ее на холсте
+        const lineLeft = selectionRect.left + (newWidth - lineWidth) / 2;
+        context.fillText(line, lineLeft, currentTop, newWidth);
+
+        // Обновляем текущую высоту
+        currentTop += parseInt(textStyles.fontSize);
+        currentHeight -= parseInt(textStyles.fontSize);
+    }
+});
+}
+
+ // Рисуем .selection-rectangle
+ context.strokeStyle = "#007BFF";
+        context.lineWidthWithPadding  = 2;
+        context.setLineDash([5, 5]); // Пунктирная линия
+        context.strokeRect(selectionRect.left, selectionRect.top, selectionRect.width, selectionRect.height);
+        // Возвращаем Data URL представление полученного изображения
+        return canvas.toDataURL();
+    } else {
+        console.error("Ошибка: Изображения не полностью загружены.");
+        return null; 
+    }
+}
+
+
+function getPrintOffset() {
+    const selectionRectangle = document.getElementById('selectionRectangle');
+
+    const leftOffset = selectionRectangle.offsetLeft;
+    const topOffset = selectionRectangle.offsetTop;
+
+    return {
+        left: leftOffset,
+        top: topOffset
+    };
+}
+
+function clearRectangle() {
+    const selectedPrint = document.querySelector('.selection-rectangle');
+    selectedPrint.innerHTML = '';
+
+    const customTextInput = document.getElementById('customTextInput');
+    const fontSelect = document.getElementById('fontSelect');
+    const textColorPicker = document.getElementById('textColorPicker');
+    
+    customTextInput.value = '';
+    fontSelect.value = '';  
+    textColorPicker.value = '';
+    applyCustomText();
+    
+    hideResizeHandles();
+    createResizeHandles();
+    selectedPrintImage = null;
+    
+    selectedPrint.style.backgroundImage = 'none';
+    selectedPrint.style.border = '2px dashed #007BFF';
+    hideCustomTextPanel();
+}
+
+let rotateIcon = document.getElementById('rotateIcon');
+let rotationAngle = 0;
+
+function rotatePrint(event) {
+    const mouseX = event.clientX;
+    const deltaX = mouseX - startX;
+
+    rotationAngle += deltaX / 3;
+    applyRotation();
+    startX = mouseX;
+}
+
+function stopRotation() {
+    document.removeEventListener('mousemove', rotatePrint);
+    document.removeEventListener('mouseup', stopRotation);
+}
+
+rotateIcon.addEventListener('mousedown', function (event) {
+    event.preventDefault();
+
+    startX = event.clientX;
+
+    document.addEventListener('mousemove', rotatePrint);
+    document.addEventListener('mouseup', stopRotation);
+});
+
+function applyRotation() {
+    let centerX = selectionRectangle.offsetWidth / 2;
+    let centerY = selectionRectangle.offsetHeight / 2;
+
+    selectionRectangle.style.transform = `rotate(${rotationAngle}deg)`;
+    selectionRectangle.style.transformOrigin = `${centerX}px ${centerY}px`;
+    updateRotationDisplay(rotationAngle);
+}
+
+function updateRotationDisplay(rotation) {
+    let rotationDisplay = document.getElementById('rotationDisplay');
+    rotationDisplay.textContent = `Текущий угол: ${rotation.toFixed(2)}°`;
+}
+
+function getRotationAngle() {
+    return rotationAngle;
+}
+
+
+    function addCustomText() {
+        const customTextPanel = document.getElementById('customTextPanel');
+        customTextPanel.style.display = 'block';
+        setTimeout(() => {
+            customTextPanel.style.opacity = '1';
+        }, 50);
+    }
+
+    function hideCustomTextPanel() {
+        const customTextPanel = document.getElementById('customTextPanel');
+        customTextPanel.style.opacity = '0';
+        setTimeout(() => {
+            customTextPanel.style.display = 'none';
+        }, 500);
+    }
+   
+    function applyCustomText() {
+    const selectedPrint = document.querySelector('.selection-rectangle');
+    const customTextInput = document.getElementById('customTextInput');
+    const fontSelect = document.getElementById('fontSelect');
+    const textColorPicker = document.getElementById('textColorPicker');
+    const fontSizeInput = document.getElementById('fontSize');
+
+     customText = customTextInput.value;
+     font = fontSelect.value;
+     textColor = textColorPicker.value;
+     fontSize = fontSizeInput.value;  
+
+    const customTextDiv = document.createElement('div');
+    customTextDiv.classList.add('custom-text-content');
+    customTextDiv.style.fontFamily = font;
+    customTextDiv.style.color = textColor;
+    customTextDiv.style.wordBreak = 'break-word';
+    customTextDiv.style.whiteSpace = 'pre-wrap';
+    customTextDiv.style.maxWidth = selectedPrint.clientWidth + 'px';  
+    customTextDiv.style.fontSize = fontSize + 'px';
+
+    // Разбиваем текст на строки
+    const lines = customText.split('\n');
+
+    // Создаем div для каждой строки и добавляем в customTextDiv
+    lines.forEach(line => {
+        const lineDiv = document.createElement('div');
+        lineDiv.innerText = line;
+        customTextDiv.appendChild(lineDiv);
+    });
+
+    let isTextFit = false;
+
+    while (!isTextFit) {
+        // Вставляем временный элемент в body, чтобы получить высоту и ширину
+        document.body.appendChild(customTextDiv);
+
+        let needExpansion = false;
+
+        // Проверяем, нужно ли расширять прямоугольник
+        customTextDiv.childNodes.forEach(lineDiv => {
+            const lineHeight = lineDiv.getBoundingClientRect().height;
+            if (lineHeight > selectedPrint.clientHeight) {
+                needExpansion = true;
+            }
+        });
+
+        const textWidth = customTextDiv.getBoundingClientRect().width;
+
+        if (needExpansion) {
+            selectedPrint.style.height = (selectedPrint.clientHeight + 5) + 'px';
+            selectedPrint.style.width = (selectedPrint.clientWidth + 5) + 'px';
+            customTextDiv.style.maxWidth = selectedPrint.clientWidth + 'px';
+        } else if (textWidth > selectedPrint.clientWidth || fontSize > selectedPrint.clientHeight) {
+            selectedPrint.style.width = (selectedPrint.clientWidth + 5) + 'px';
+            selectedPrint.style.height = (selectedPrint.clientHeight + 5) + 'px';
+            customTextDiv.style.maxWidth = selectedPrint.clientWidth + 'px';
+        } else {
+            isTextFit = true;
+        }
+
+        document.body.removeChild(customTextDiv);
+    }
+
+    // Удаляем стили, чтобы они не влияли на изменение размера
+    selectedPrint.innerHTML = '';
+    selectedPrint.appendChild(customTextDiv);
+    selectedPrint.style.pointerEvents = 'all';
+    hideResizeHandles();
+    createResizeHandles();
+    hideCustomTextPanel();
+
+    const currentCustomTextInfo = {
+        text: customText,
+        font: font,
+        textColor: textColor,
+        lines: lines,
+        fontSize: parseInt(window.getComputedStyle(customTextDiv).fontSize),
+        fontFamily: window.getComputedStyle(customTextDiv).fontFamily,
+        fontColor: window.getComputedStyle(customTextDiv).color,
+        textHeight: selectedPrint.clientHeight,
+        wordBreak: 'break-word',
+        whiteSpace: 'pre-wrap',
+        customTextDiv: customTextDiv,  // Добавляем customTextDiv в объект currentCustomTextInfo
+        maxWidth: selectedPrint.clientWidth + 'px'
+    };
+
+    return currentCustomTextInfo;
+}
+
+            // Функция для отмены добавления пользовательского текста
+            function cancelCustomText() {
+                hideCustomTextPanel();
+            }
+            
+            document.getElementById("prevButton").addEventListener("click", function() {
+            console.log("Going back");
+            history.back();
+        });
+
+            function goToFinalStep() {
+    // Получаем данные
+    const selectedModelElement = document.querySelector('.product-details h1');
+    const selectedModel = selectedModelElement.textContent.toLowerCase();
+    const selectedPrint = document.querySelector('.selection-rectangle'); 
+    const customTextElement = selectedPrint.querySelector('.custom-text-content');
+    // Исправленный селектор для поиска текста внутри элемента
+    const selectedSizeElement = Array.from(document.querySelectorAll('.panel-info strong')).find(el => el.textContent.includes('Size'));
+    const selectedSize = selectedSizeElement ? selectedSizeElement.nextSibling.textContent.trim() : '';
+    let customTextInfo = applyCustomText();
+    let frontImage = document.getElementById('img_top');
+    let backImage = document.getElementById('img_back');
+    if ((selectedPrintImage && selectedPrintImage !== 'none') || (customTextElement && customTextElement !== 'none' && customTextElement !== null)) {
+        // Вызываем combineImages только если есть принт или кастомный текст
+        if (currentSide === 'front') {
+            frontImage = combineImages(frontImage, selectedPrintImage, customTextElement, rotationAngle , customTextInfo);
+            backImage = document.getElementById('img_back').src;
+        } else {
+            backImage = combineImages(backImage, selectedPrintImage, customTextElement, rotationAngle , customTextInfo);
+            frontImage = document.getElementById('img_top').src;
+        }
+    } else {
+        // Если нет принта или кастомного текста, используем оригинальные изображения
+        frontImage = document.getElementById('img_top').src;
+        backImage = document.getElementById('img_back').src;
+    }
+
+    console.log('Selected Model:', selectedModel);
+    console.log('Selected Size:', selectedSize);
+    console.log('Selected Image:', frontImage);
+    console.log('not_selectedImage:', backImage);
+    console.log('Selected Print:', selectedPrint);
+    console.log('Selected Color:', selectedColor);
+
+    // Инициализируем пустой объект с данными
+    const data = {
+        model: selectedModel,
+        size: selectedSize,
+        color: selectedColor,
+        front_image: frontImage,
+        back_image: backImage,
+        printData: {}
+    };
+
+    // Добавляем данные о принте, если присутствует
+    if (selectedPrintImage instanceof HTMLImageElement) {
+        data.printData.print = selectedPrintImage.src;
+        data.printData.side = currentSide;
+        data.printData.rotationAngle = rotationAngle;
+        data.printData.rectCoordinates = {
+            left: parseInt(selectedPrint.style.left),
+            top: parseInt(selectedPrint.style.top),
+            width: (parseInt(selectedPrint.style.width)),
+            height: (parseInt(selectedPrint.style.height))
+        };
+        const printOffset = getPrintOffset();
+        data.printData.printOffset = {
+        left: printOffset.left,
+        top: printOffset.top
+    };
+        console.log('Print Data:', data.printData);
+    }
+    
+    if (customTextElement.textContent) {
+        data.printData.customText = {
+            text: customTextElement.textContent,
+            fontFamily: customTextElement.style.fontFamily,
+            textColor: customTextElement.style.color
+        };
+
+        console.log('Custom Text Data:', data.printData.customText);
+    }
+    debugger;
+        localStorage.setItem('finalStepData', JSON.stringify(data));
+        window.location.href = '/final_step ';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_background_data')  // Запрос к серверу для получения данных о фоне
+        .then(response => response.json())
+        .then(data => {
+            if (data.backgroundImage) {
+                updateTextColorAndBackground(data.backgroundImage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    function updateTextColorAndBackground(imageSource) {
+    var img = new Image();
+    img.src = imageSource;
+
+    img.onload = function() {
+        applyTextColorBasedOnBackground(img);
+        document.body.style.backgroundImage = `url(${imageSource})`;
+        document.body.style.backgroundSize = '100% 100%'; // Растягиваем изображение на весь экран
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed'; // Зафиксируем изображение
+    };
+}
+
+    function applyTextColorBasedOnBackground(img) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var elements = [document.querySelector('h1'), document.querySelector('h2'), document.querySelector('h3')];
+        elements.forEach(function(element) {
+            if (element) {
+                var rect = element.getBoundingClientRect();
+                var x = rect.left + window.scrollX;
+                var y = rect.top + window.scrollY;
+                var pixel = ctx.getImageData(x, y, 1, 1).data;
+                var hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                element.style.color = getContrastYIQ(hex);
+            }
+        });
+    }
+
+    function rgbToHex(r, g, b) {
+        return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(1,2),16);
+        var g = parseInt(hexcolor.substr(3,2),16);
+        var b = parseInt(hexcolor.substr(5,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+        </script>        
+    </body>
+</html>

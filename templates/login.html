@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f8f8;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .alert {
+            opacity: 1;
+            transition: opacity 2s ease-in-out;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .alert-success {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .alert-danger {
+            background-color: #f44336;
+            color: white;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 300px;
+            margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            margin-top: 10px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        p {
+            margin-top: 10px;
+            color: #555;
+        }
+
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <title>Login</title>
+</head>
+
+<body>
+    <h1>Login</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+    
+    <div style="position: absolute; top: 20px; right: 10px;">
+        <a href="{{ url_for('select_product') }}" style="color: white; background-color: #4CAF50; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Home page</a>
+    </div>
+
+    <form action="{{ url_for('login') }}" method="post">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required>
+
+        <label for="phone">Phone:</label>
+        <input type="text" id="phone" name="phone" required>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        
+            <label for="employeeRole">Role:</label>
+            <select id="employeeRole" name="employeeRole" required>
+                <option value="print">print</option>
+                <option value="printing">printing</option>
+                <option value="issue">issue</option>
+                <option value="reception">reception</option>
+                <option value="administrator">administrator</option>
+            </select>
+
+        <!-- Add a hidden field to pass the redirect_function parameter -->
+        <input type="hidden" name="redirect_function" value="{{ redirect_function }}">
+        <input type="submit" value="Login">
+    </form>
+    <script>
+        // Gradually hide flash messages
+        document.addEventListener('DOMContentLoaded', function() {
+            var alerts = document.querySelectorAll('.alert');
+
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    alert.style.opacity = '0';
+                }, 1000); // Adjust the time as needed
+            });
+        });
+    </script>
+</body>
+
+</html>

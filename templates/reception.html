@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <title>Order Confirmation</title>
+
+    <style>
+       body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    padding: 20px;
+}
+
+h1 {
+    color: black;
+}
+
+form {
+    margin-bottom: 20px;
+    display: flex;
+}
+
+input[type="text"] {
+    padding: 8px;
+    font-size: 16px;
+    flex: 1;
+}
+
+input[type="submit"],
+input[type="button"] {
+    padding: 10px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+table {
+    width: 100%; /* Установите ширину таблицы в 100% */
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 8px;
+    font-size: 1.35vmin;
+    background-color: #fff;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #4CAF50;
+    color: #fff;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+td:first-child, th:first-child {
+    border-top-left-radius: 8px;
+}
+
+td:last-child, th:last-child {
+    border-top-right-radius: 8px;
+}
+
+th:first-child {
+    border-bottom-left-radius: 8px;
+}
+
+th:last-child {
+    border-bottom-right-radius: 8px;
+}
+
+.action-form {
+    display: inline-block;
+}
+
+.back-to-all {
+    margin-top: 10px;
+}
+
+.color-box {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #ddd;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.alert {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.alert-success {
+    background-color: #DFF2BF;
+    color: #4F8A10;
+}
+
+.alert-error {
+    background-color: #F2DEDE;
+    color: #D8000C;
+}
+
+    </style>
+</head>
+
+<body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+  
+    <div style="text-align: right; margin-top: 10px; margin-right: 10px;">
+        <a href="{{ url_for('logout') }}" style="color: white; background-color: #4CAF50; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Logout</a>
+    </div>
+    <h1>Order Confirmation</h1>
+
+    <form action="{{ url_for('reception_search') }}" method="post">
+        <input type="text" name="search_query" placeholder="Search by order number, name, phone, or promo code" required>
+        <input type="submit" value="Search">
+    </form>
+
+    <div class="back-to-all">
+        <form action="{{ url_for('reception') }}" method="get">
+            <input type="submit" value="Back to All Confirmed Orders">
+        </form>
+    </div>
+
+    <h2>Current Orders</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Color</th>
+                <th>Model</th>
+                <th>Size</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr id="order-row-{{ order.id }}">
+                <td>{{ order.id }}</td>
+                <td>
+                    <div class="color-box" id="color-box-{{ order.id }}"></div>
+                    {{ order.color }}
+                    <script>
+                        document.getElementById("color-box-{{ order.id }}").style.backgroundColor = "{{ order.color }}";
+                    </script>
+                </td>
+                <td>{{ order.model }}</td>
+                <td>{{ order.size }}</td>
+                <td>{{ order.client_name }}</td>
+                <td>{{ order.client_contact }}</td>
+                <td>{{ order.status }}</td>
+                <td>
+                    <form class="action-form" onsubmit="confirmOrder('{{ order.id }}', 'order-row-{{ order.id }}'); return false;">
+                        <input type="submit" value="Confirm">
+                    </form>
+                    <form class="action-form" onsubmit="cancelOrder('{{ order.id }}', 'order-row-{{ order.id }}'); return false;">
+                        <input type="submit" value="Cancel">
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="success-message" class="alert alert-success" style="display: none;"></div>
+    <div id="error-message" class="alert alert-error" style="display: none;"></div>
+
+    <script>
+ window.onload = function () {
+        var startTime = new Date().getTime();
+        var timerInterval;
+
+        function updateTimer() {
+            var currentTime = new Date().getTime();
+            var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+
+            var remainingMinutes = Math.floor((elapsedSeconds) / 60);
+            var remainingSeconds = (elapsedSeconds) % 60;
+
+            console.log('Прошло времени: ' + remainingMinutes + ' минут ' + remainingSeconds + ' секунд');
+        }
+
+        // Запуск таймера каждую секунду
+        timerInterval = setInterval(updateTimer, 1000);
+
+        // Обработка события beforeunload
+        window.addEventListener('beforeunload', function (event) {
+            clearInterval(timerInterval); // Остановка таймера перед выгрузкой страницы
+
+            // Отправка времени на сервер с использованием AJAX
+            var currentTime = new Date().getTime();
+            var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+
+            fetch('/update_working_hours', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ elapsedSeconds: elapsedSeconds }),
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('Failed to update working hours.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    };
+        async function confirmOrder(orderId, rowId) {
+            try {
+                const response = await fetch(`/reception_confirm/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    showSuccessMessage('Order confirmed successfully');
+                    var row = document.getElementById(rowId);
+                    if (row) {
+                        row.style.display = 'none';
+                    }
+                } else {
+                    const data = await response.json();
+                    showErrorMessage(data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorMessage('Error confirming the order');
+            }
+        }
+
+        async function cancelOrder(orderId, rowId) {
+            try {
+                const response = await fetch(`/reception_cancel/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    showSuccessMessage('Order canceled successfully');
+                    var row = document.getElementById(rowId);
+                    if (row) {
+                        row.style.display = 'none';
+                    }
+                } else {
+                    const data = await response.json();
+                    showErrorMessage(data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showErrorMessage('Error canceling the order');
+            }
+        }
+
+        function showSuccessMessage(message) {
+    var messageDiv = document.createElement('div');
+    messageDiv.classList.add('alert', 'alert-success');
+    messageDiv.innerText = message;
+
+    var flashContainer = document.getElementById('flash-messages');
+    if (flashContainer) {
+        flashContainer.insertBefore(messageDiv, flashContainer.firstChild);
+    } else {
+        document.body.prepend(messageDiv);
+    }
+
+    setTimeout(function () {
+        messageDiv.remove();
+    }, 2000);
+}
+
+function showErrorMessage(message) {
+    var messageDiv = document.createElement('div');
+    messageDiv.classList.add('alert', 'alert-error');
+    messageDiv.innerText = message;
+
+    var flashContainer = document.getElementById('flash-messages');
+    if (flashContainer) {
+        flashContainer.insertBefore(messageDiv, flashContainer.firstChild);
+    } else {
+        document.body.prepend(messageDiv);
+    }
+
+    setTimeout(function () {
+        messageDiv.remove();
+    }, 2000);
+}
+
+    </script>
+</body>
+
+</html>

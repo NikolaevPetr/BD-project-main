@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <title>Print Task</title>
+    <style>
+          body {
+            font-family: Arial, sans-serif;
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        button {
+            padding: 20px;
+            font-size: 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            font-size: 18px;
+            margin-top: 10px;
+            margin-right: 5px;
+        }
+
+        input[type="text"][readonly] {
+            background-color: #ddd;
+        }
+
+        input[type="submit"] {
+            padding: 12px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .close {
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            padding: 5px;
+        }
+
+        table {
+    width: 100%; /* Установите ширину таблицы в 100% */
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 8px;
+    font-size: 2vmin;
+    background-color: #fff;
+}
+
+        th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #4CAF50;
+    color: #fff;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+td:first-child, th:first-child {
+    border-top-left-radius: 8px;
+}
+
+td:last-child, th:last-child {
+    border-top-right-radius: 8px;
+}
+
+th:first-child {
+    border-bottom-left-radius: 8px;
+}
+
+th:last-child {
+    border-bottom-right-radius: 8px;
+}
+
+.no-orders-message {
+            color: #fff;
+            background-color: #4CAF50;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .alert {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.alert-success {
+    background-color: #DFF2BF;
+    color: #4F8A10;
+}
+
+.alert-error {
+    background-color: #F2DEDE;
+    color: #D8000C;
+}
+    </style>
+</head>
+<body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+    <div style="text-align: right; margin-top: 10px; margin-right: 10px;">
+        <a href="{{ url_for('logout') }}" style="color: white; background-color: #4CAF50; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Logout</a>
+    </div>
+    <h1>Print Task</h1>
+
+    <!-- Big button to print a task -->
+    <button onclick="showPrintForm()">Print Task</button>
+
+    <!-- Form for entering data when printing a task -->
+    <form id="printForm" action="/print_task" method="post" class="hidden">
+        <span class="close" onclick="hidePrintForm()">×</span>
+        <input type="text" name="employee_name" value="{{ employee_name }}" readonly>
+        <input type="text" name="employee_phone" value="{{ employee_phone }}" readonly>
+        <input type="text" name="order_id" placeholder="Order ID" > <!-- Добавлено поле для ввода номера заказа -->
+        <input type="submit" value="Print">
+    </form>
+
+    <!-- Big button to continue printing a task -->
+    <button onclick="showContinuePrintForm()">Continue Print Task</button>
+
+    <!-- Form for entering data when continuing printing a task -->
+    <form id="continuePrintForm" action="/continue_print_task" method="post" class="hidden">
+        <span class="close" onclick="hideContinuePrintForm()">×</span>
+        <input type="text" name="employee_name" value="{{ employee_name }}" readonly>
+        <input type="text" name="employee_phone" value="{{ employee_phone }}" readonly>
+        <input type="text" name="order_id" placeholder="Order ID" required>
+        <input type="submit" value="Continue Print">
+    </form>
+
+    <!-- Table for displaying orders -->
+    <h2>Current Orders</h2>
+    {% if orders|length == 0 %}
+    <p class="no-orders-message">No current orders</p>
+    {% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Model</th>
+                <th>Name</th>
+                <th>Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr id="order-row-{{ order.id }}">
+                <td>{{ order.id }}</td>
+                <td>{{ order.model }}</td>
+                <td>{{ order.client_name }}</td>
+                <td>{{ order.client_contact }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>Orders in Progress</h2>
+    {% if orders_in_progress|length == 0 %}
+    <p class="no-orders-message" >No orders in progress</p>
+    {% else %}
+<table>
+    <thead>
+        <tr>
+            <th>Order ID</th>
+            <th>Model</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in orders_in_progress %}
+        <tr>
+            <td>{{ order.id }}</td>
+            <td>{{ order.model }}</td>
+            <td>{{ order.client_name }}</td>
+            <td>{{ order.client_contact }}</td>
+            <td>{{ order.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<div id="success-message" class="alert alert-success" style="display: none;"></div>
+<div id="error-message" class="alert alert-error" style="display: none;"></div>
+
+    <script>
+        function showPrintForm() {
+            document.getElementById('printForm').style.display = 'block';
+        }
+
+        function hidePrintForm() {
+            document.getElementById('printForm').style.display = 'none';
+        }
+
+        function showContinuePrintForm() {
+            document.getElementById('continuePrintForm').style.display = 'block';
+        }
+
+        function hideContinuePrintForm() {
+            document.getElementById('continuePrintForm').style.display = 'none';
+        }
+    
+    </script>
+</body>
+</html>

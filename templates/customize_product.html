@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customize Your Product</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Оформление размера, который автоматически выбран */
+        .size.auto-selected {
+            border: 2px solid lightblue; /* Голубая окоемка */
+        }
+    </style>
+</head>
+<body>
+    <div class="container-customize">
+        <div class="product-details">
+            <div class="selected-model">
+                <h1>{{ selected_model_name|replace("_", " ")|title }}</h1>
+                <img id="img_top" src="{{ selected_model_image }}" alt="{{ selected_model_name }}">
+                <img id="img_back" style="display: none;" src="{{ back_model_image }}" alt="{{ selected_model }} Back">
+            </div>
+        </div>
+        <div class="customization-panel">
+            <h1>Available Sizes</h1>
+            <div class="size-list">
+                {% if available_sizes|length == 1 %}
+                    {% for size in available_sizes %}
+                        <label class="size auto-selected" onclick="selectSize(this)">
+                            <div class="size-content">  
+                                <p>{{ size }}</p>
+                            </div>
+                        </label>
+                    {% endfor %}
+                    <script>
+                        // Блокируем изменение размера, если доступен только один размер
+                        document.querySelectorAll('.auto-selected').forEach(function(element) {
+                            element.onclick = function() {
+                                return false;
+                            };
+                        });
+                    </script>
+                {% else %}
+                    {% for size in available_sizes %}
+                        <label class="size {% if size.selected %}selected{% endif %}" onclick="selectSize(this)">
+                            <div class="size-content">  
+                                <p>{{ size }}</p>
+                            </div>
+                        </label>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div class="color-picker-container">
+                <label for="colorPicker">Custom Color:</label>
+                <input type="color" id="colorPicker" value="#000000" onchange="updateColor()">
+                <button type="button" onclick="resetColor()">Reset Color</button>
+            </div>
+            <div class="button-container">
+                <a href="javascript:void(0);" id="prevButton">Prev</a>
+                <button type="button" id="nextButton" onclick="goToSelectPrint()">Next</button>
+            </div>
+        </div>
+    </div>
+    <script>
+ 
+function hexToRgb(color) {
+    color = color.replace(/^#?([a-f\d])([a-f\d])([a-f\d])$/i, (m, r, g, b) => r + r + g + g + b + b);
+
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+    return result
+        ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+          }
+        : { r: 0, g: 0, b: 0 };
+}
+
+// Функция проверки, близки ли цвета к белому
+function isCloseToWhite(red, green, blue) {
+    return red > 10 && green > 10 && blue > 10;
+}
+
+// Асинхронная функция загрузки изображения
+async function loadImage(src) {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = src;
+    });
+    return img;
+}
+
+// Функция окрашивания одежды
+async function colorClothing(imgId, hexaColor) {
+    const imgElement = document.getElementById(imgId);
+    const originalSrc = imgId === 'img_top' ? originalImageSrc : originalBackImageSrc;
+
+    try {
+        await loadImage(originalSrc);
+    } catch (error) {
+        console.error('Ошибка при загрузке изображения:', error);
+        return;
+    }
+
+    imgElement.src = originalSrc;
+
+    const tempCanvas = document.createElement('canvas');
+    const width = tempCanvas.width = imgElement.naturalWidth;
+    const height = tempCanvas.height = imgElement.naturalHeight;
+
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(imgElement, 0, 0, width, height);
+
+    const imageData = tempCtx.getImageData(0, 0, width, height);
+    const data = new Uint8Array(imageData.data.buffer);
+
+    const rgbColor = hexToRgb(hexaColor);
+
+    for (let i = 0; i < data.length; i += 4) {
+        const red = data[i];
+        const green = data[i + 1];
+        const blue = data[i + 2];
+
+        if (isCloseToWhite(red, green, blue)) {
+            data[i] = Math.min(255, Math.max(0, red + (rgbColor.r - red) / 2));
+            data[i + 1] = Math.min(255, Math.max(0, green + (rgbColor.g - green) / 2));
+            data[i + 2] = Math.min(255, Math.max(0, blue + (rgbColor.b - blue) / 2));
+        }
+    }
+
+    tempCtx.putImageData(imageData, 0, 0);
+
+    imgElement.src = tempCanvas.toDataURL();
+}
+
+// Обработчик события загрузки страницы
+window.onload = async function () {
+    const imgElement = document.getElementById('img_top');
+    const backImgElement = document.getElementById('img_back');
+    originalImageSrc = imgElement.src;
+    originalBackImageSrc = backImgElement.src;
+
+    const colorPicker = document.getElementById('colorPicker');
+    let previousColor = colorPicker.value;
+
+    // Функция для обновления цвета
+    const updateColor = async () => {
+        if (colorPicker.value !== previousColor) {
+            await colorClothing('img_top', colorPicker.value);
+            await colorClothing('img_back', colorPicker.value);
+            saveColorToLocalStorage(colorPicker.value);
+            previousColor = colorPicker.value;
+        }
+
+        requestAnimationFrame(updateColor);
+    };
+
+    colorPicker.addEventListener('input', throttle(updateColor, 50));
+    requestAnimationFrame(updateColor);
+};
+
+
+        function selectOption(element) {
+            element.classList.toggle('selected');
+            var checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+        }
+
+        document.getElementById('colorPicker').addEventListener('input', function () {
+        var selectedColor = this.value;
+
+        colorClothing('img_top', selectedColor);
+        colorClothing('img_back', selectedColor);
+
+        console.log('Selected Color:', selectedColor);
+        document.getElementById('selected_color_input').value = selectedColor;
+
+        // Сохраняем выбранный цвет в скрытом поле
+
+        
+    });
+
+        function selectSize(element) {
+            element.classList.toggle('selected');
+        }
+
+        function updateColor() {
+            var colorPicker = document.getElementById('colorPicker');
+            var selectedColor = colorPicker.value.toLowerCase(); // Приводим к нижнему регистру
+            
+            colorClothing('img_top', selectedColor);
+            colorClothing('img_back', selectedColor); // Окрашиваем заднее изображение
+
+            fetch('/customize_product', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    selected_model: "{{ selected_model }}",
+                    selected_size: getSelectedSizes()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function getSelectedSizes() {
+            var selectedSizes = document.querySelectorAll('.size.selected');
+            return Array.from(selectedSizes).map(size => size.textContent.trim()).join(',');
+        }
+
+        function resetColor() {
+            localStorage.removeItem('selectedColor');
+            var imgElement = document.getElementById('img_top');
+            imgElement.src = originalImageSrc;
+            document.getElementById('colorPicker').value = "#000000";
+        }
+
+        document.getElementById("prevButton").addEventListener("click", function(event) {
+            event.preventDefault(); // Отменяем стандартное поведение ссылки
+            window.history.back(); // Возврат на предыдущую страницу
+        });
+        
+        function goToSelectPrint() {
+    var selectedSizes = document.querySelectorAll('.size.selected');
+    if (selectedSizes.length === 0) {
+        var autoSelectedSize = document.querySelector('.auto-selected');
+        if (autoSelectedSize) {
+            autoSelectedSize.classList.add('selected');
+        } else {
+            alert('Please select a size.');
+            return;
+        }
+    }
+
+            var colorPicker = document.getElementById('colorPicker');
+            if (!colorPicker.value) {
+                alert('Please select a color.');
+                return;
+            }
+
+            var selectedSizesArray = Array.from(selectedSizes).map(size => size.textContent.trim());
+            var selectedSizesString = selectedSizesArray.join(',');
+
+            // Добавляем автоматически выбранный размер, если есть
+            var autoSelectedSize = document.querySelector('.auto-selected');
+            if (autoSelectedSize && !selectedSizesArray.includes(autoSelectedSize.textContent.trim())) {
+                selectedSizesString += (selectedSizesString ? ',' : '') + autoSelectedSize.textContent.trim();
+            }
+
+            var imgTop = new Image();
+            imgTop.src = document.getElementById('img_top').src;
+
+            var imgBack = new Image();
+            imgBack.src = document.getElementById('img_back').src;
+
+            var canvasTop = document.createElement('canvas');
+            canvasTop.width = imgTop.width;
+            canvasTop.height = imgTop.height;
+            var ctxTop = canvasTop.getContext('2d');
+            ctxTop.drawImage(imgTop, 0, 0);
+
+            var canvasBack = document.createElement('canvas');
+            canvasBack.width = imgBack.width;
+            canvasBack.height = imgBack.height;
+            var ctxBack = canvasBack.getContext('2d');
+            ctxBack.drawImage(imgBack, 0, 0);
+
+            var modifiedImageTop = canvasTop.toDataURL('image/png', 0.8);
+            var modifiedImageBack = canvasBack.toDataURL('image/png', 0.8);
+
+            var form = document.createElement('form');
+            form.method = 'post';
+            form.action = "{{ url_for('select_print') }}";
+
+            var selectedProductInput = document.createElement('input');
+            selectedProductInput.type = 'hidden';
+            selectedProductInput.name = 'selected_product';
+            selectedProductInput.value = "{{ selected_product }}";
+            form.appendChild(selectedProductInput);
+
+            var selectedModelInput = document.createElement('input');
+            selectedModelInput.type = 'hidden';
+            selectedModelInput.name = 'selected_model';
+            selectedModelInput.value = "{{ selected_model }}";
+            form.appendChild(selectedModelInput);
+
+            var selectedSizeInput = document.createElement('input');
+            selectedSizeInput.type = 'hidden';
+            selectedSizeInput.name = 'selected_size';
+            selectedSizeInput.value = selectedSizesString;
+            form.appendChild(selectedSizeInput);
+
+            var selectedColorInput = document.createElement('input');
+            selectedColorInput.type = 'hidden';
+            selectedColorInput.name = 'selected_color';
+            selectedColorInput.value = colorPicker.value;
+            form.appendChild(selectedColorInput);
+
+            var modifiedImageTopInput = document.createElement('input');
+            modifiedImageTopInput.type = 'hidden';
+            modifiedImageTopInput.name = 'modified_image_top';
+            modifiedImageTopInput.value = modifiedImageTop;
+            form.appendChild(modifiedImageTopInput);
+
+            var modifiedImageBackInput = document.createElement('input');
+            modifiedImageBackInput.type = 'hidden';
+            modifiedImageBackInput.name = 'modified_image_back';
+            modifiedImageBackInput.value = modifiedImageBack;
+            form.appendChild(modifiedImageBackInput);
+
+            document.body.appendChild(form);
+            // Добавляем форму с автоматически выбранным размером
+            var autoSelectedSizeInput = document.createElement('input');
+            autoSelectedSizeInput.type = 'hidden';
+            autoSelectedSizeInput.name = 'auto_selected_size';
+            autoSelectedSizeInput.value = autoSelectedSize ? autoSelectedSize.textContent.trim() : '';
+            form.appendChild(autoSelectedSizeInput);
+
+            // Отправляем форму
+            form.submit();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_background_data')  // Запрос к серверу для получения данных о фоне
+        .then(response => response.json())
+        .then(data => {
+            if (data.backgroundImage) {
+                updateTextColorAndBackground(data.backgroundImage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    function updateTextColorAndBackground(imageSource) {
+    var img = new Image();
+    img.src = imageSource;
+
+    img.onload = function() {
+        applyTextColorBasedOnBackground(img);
+        document.body.style.backgroundImage = `url(${imageSource})`;
+        document.body.style.backgroundSize = '100% 100%'; // Растягиваем изображение на весь экран
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed'; // Зафиксируем изображение
+    };
+}
+
+    function applyTextColorBasedOnBackground(img) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var elements = [document.querySelector('h1'), document.querySelector('h2'), document.querySelector('h3')];
+        elements.forEach(function(element) {
+            if (element) {
+                var rect = element.getBoundingClientRect();
+                var x = rect.left + window.scrollX;
+                var y = rect.top + window.scrollY;
+                var pixel = ctx.getImageData(x, y, 1, 1).data;
+                var hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                element.style.color = getContrastYIQ(hex);
+            }
+        });
+    }
+
+    function rgbToHex(r, g, b) {
+        return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(1,2),16);
+        var g = parseInt(hexcolor.substr(3,2),16);
+        var b = parseInt(hexcolor.substr(5,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+    </script>        
+</body>
+</html>

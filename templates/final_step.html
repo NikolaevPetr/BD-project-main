@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+    .confirmation-panel {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 999;
+    }
+
+    body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f8f8;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.confirmation-panel {
+    background-color: #4CAF50;
+    color: white;
+    padding: 20px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 999;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 50px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+#smsPanel, #emailPanel, #socialPanel {
+    display: none;
+}
+
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Черный фон с небольшой прозрачностью */
+    z-index: 998; /* Меньше, чем у панели подтверждения */
+}
+
+</style>
+    <title>Confirmation</title>
+</head>
+<body>
+
+<h1>Confirmation</h1>
+<div id="overlay" class="overlay"></div>
+
+<div id="confirmationPanel" class="confirmation-panel" style="display: none;">
+    <p>Your order has been successfully confirmed!</p>
+    <p>Order number: {{ order_id }}</p>
+    <button onclick="closeConfirmationPanel()">Close</button>
+</div>
+
+<!-- Добавляем дополнительные поля ввода для смс, емейла и соц сетей -->
+<form id="finalStepForm">
+    <input type="hidden" id="finalStepData" name="finalStepData" value="">
+
+    <label for="client_full_name">Full Name:</label>
+    <input type="text" id="client_full_name" name="client_full_name" required>
+
+    <label for="client_phone">Phone:</label>
+    <input type="tel" id="client_phone" name="client_phone" placeholder="+7" pattern="\+7[0-9]{10}" title="Please enter a valid phone number" required>
+
+    <label for="promo_code">Promo Code:</label>
+    <input type="text" id="promo_code" name="promo_code">
+
+    <label for="notification_method">Notification method:</label>
+    <select id="notification_method" name="notification_method" onchange="showContactInput()" required>
+        <option value="sms">SMS</option>
+        <option value="email">Email</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="viber">Viber</option>
+        <option value="telegram">Telegram</option>
+        <option value="no_notification" selected>Not to notify</option>
+    </select>
+
+    <!-- Поля ввода для SMS -->
+    <div id="smsPanel" style="display: none;">
+        <label for="sms_phone">SMS Phone:</label>
+        <input type="tel" id="sms_phone" name="sms_phone" placeholder="+7" pattern="\+7[0-9]{10}" title="Please enter a valid phone number for SMS" required>
+    </div>
+
+    <!-- Поля ввода для Email -->
+    <div id="emailPanel" style="display: none;">
+        <label for="client_email">Email:</label>
+        <input type="email" id="client_email" name="client_email" required>
+    </div>
+
+    <!-- Поля ввода для соц сетей -->
+    <div id="socialPanel" style="display: none;">
+        <label for="social_username">Social Username:</label>
+        <input type="text" id="social_username" name="social_username" pattern="[a-zA-Z0-9_]+" title="Please enter a valid social username (alphanumeric and underscores only)" required>
+    </div>
+
+    <button type="button" onclick="submitFinalStepForm()">Confirm order</button>
+    <button type="submit" id="prevButton">Prev</button>
+</form>
+
+<!-- Скрипт для отображения/скрытия дополнительных полей в зависимости от выбора -->
+<script>
+    function showContactInput() {
+        const notificationMethod = document.getElementById('notification_method').value;
+        const smsPanel = document.getElementById('smsPanel');
+        const emailPanel = document.getElementById('emailPanel');
+        const socialPanel = document.getElementById('socialPanel');
+
+        // Скрыть все поля ввода контактной информации
+        smsPanel.style.display = 'none';
+        emailPanel.style.display = 'none';
+        socialPanel.style.display = 'none';
+
+        // Отобразить поля ввода в зависимости от выбранного способа уведомления
+        if (notificationMethod === 'sms') {
+            // Показать поле ввода номера телефона для SMS
+            smsPanel.style.display = 'block';
+        } else if (notificationMethod === 'email') {
+            // Показать поле ввода email
+            emailPanel.style.display = 'block';
+        } else if (notificationMethod === 'whatsapp' || notificationMethod === 'viber' || notificationMethod === 'telegram') {
+            // Показать поле ввода для соц сетей
+            socialPanel.style.display = 'block';
+        } else {
+            // Не уведомлять - не показывать дополнительные поля
+        }
+    }
+
+    const validPromoCodes = ['FoloPromo1' , 'AlexDiscount', 'FoloFashion', 'PrintMaster' ,'CodeSasha' ,'StylishFolo', 'DesignByAlex' ,'FashionFolo' ,'PromoSasha' ,'AlexPrint10' ];
+    function submitFinalStepForm() {
+        const finalData = JSON.parse(localStorage.getItem('finalStepData'));
+        
+        // Получаем данные из формы
+        const clientName = document.getElementById('client_full_name').value;
+        const clientPhone = document.getElementById('client_phone').value;
+        const notificationMethod = document.getElementById('notification_method').value;
+        const promoCode = document.getElementById('promo_code').value;
+
+        finalData.client_name = clientName;
+        finalData.client_contact = clientPhone;
+        finalData.notification_method = notificationMethod;
+        finalData.promo_code = promoCode;
+        // Формируем объект данных для отправки на сервер
+
+        if (!clientName || typeof clientName !== 'string') {
+            alert('Please enter a valid name(string).');
+            return;
+        }
+
+        // Дополнительные проверки в зависимости от выбранного способа уведомления
+        if (notificationMethod === 'sms') {
+            const smsPhone = document.getElementById('sms_phone').value;
+            if (!/\+7[0-9]{10}/.test(smsPhone)) {
+                alert('Please enter a valid phone number for SMS.');
+                return;
+            }
+        } else if (notificationMethod === 'email') {
+            const clientEmail = document.getElementById('client_email').value;
+            if (!/\S+@\S+\.\S+/.test(clientEmail)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+        }
+
+        if (promoCode.trim() === '') {
+            // Промокод не введен, продолжаем выполнение без учета промокода
+            submitDataWithoutPromoCode(finalData);
+        } else {
+            // Промокод введен, проверяем его действительность
+            if (validPromoCodes.includes(promoCode)) {
+                // Промокод действителен, продолжаем выполнение
+                submitDataWithoutPromoCode(finalData);
+            } else {
+                // Промокод недействителен, выводим сообщение
+                alert('Invalid promo code. Please enter a valid one.');
+                return;
+            }
+        }
+    }
+        
+    function submitDataWithoutPromoCode(finalData) {   
+    document.getElementById('overlay').style.display = 'block';
+    localStorage.setItem('panelVisible', 'true'); // Сохраняем состояние панели
+     // Отправляем данные на сервер
+     fetch('/final_step', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(finalData),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(result => {
+
+            // Отображаем панель подтверждения
+            const confirmationPanel = document.getElementById('confirmationPanel');
+            confirmationPanel.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+    
+
+    function closeConfirmationPanel() {
+    document.getElementById('overlay').style.display = 'none';
+    const confirmationPanel = document.getElementById('confirmationPanel');
+    confirmationPanel.style.display = 'none';
+    localStorage.removeItem('panelVisible'); // Удаляем состояние панели
+    window.location.href = '/';
+}
+    document.getElementById("prevButton").addEventListener("click", function(event) {
+        event.preventDefault(); // Отменяем стандартное поведение ссылки
+        window.history.back(); // Возврат на предыдущую страницу
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_background_data')  // Запрос к серверу для получения данных о фоне
+        .then(response => response.json())
+        .then(data => {
+            if (data.backgroundImage) {
+                updateTextColorAndBackground(data.backgroundImage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    function updateTextColorAndBackground(imageSource) {
+    var img = new Image();
+    img.src = imageSource;
+
+    img.onload = function() {
+        applyTextColorBasedOnBackground(img);
+        document.body.style.backgroundImage = `url(${imageSource})`;
+        document.body.style.backgroundSize = '100% 100%'; // Растягиваем изображение на весь экран
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed'; // Зафиксируем изображение
+    };
+}
+
+    function applyTextColorBasedOnBackground(img) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var elements = [document.querySelector('h1'), document.querySelector('h2'), document.querySelector('h3')];
+        elements.forEach(function(element) {
+            if (element) {
+                var rect = element.getBoundingClientRect();
+                var x = rect.left + window.scrollX;
+                var y = rect.top + window.scrollY;
+                var pixel = ctx.getImageData(x, y, 1, 1).data;
+                var hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                element.style.color = getContrastYIQ(hex);
+            }
+        });
+    }
+
+    function rgbToHex(r, g, b) {
+        return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(1,2),16);
+        var g = parseInt(hexcolor.substr(3,2),16);
+        var b = parseInt(hexcolor.substr(5,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+    </script>        
+</body>
+</html>

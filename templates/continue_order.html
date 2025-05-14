@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <title>Orders</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 100%; /* Установите ширину таблицы в 100% */
+            border-collapse: collapse;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .print-data {
+            white-space: pre-wrap;
+        }
+
+        .full-width-image {
+            max-width: 50px;
+        }
+
+        .order-number, .order-size {
+            width: 50px;
+        }
+
+        .table-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            margin-top: 10px;
+        }
+
+        .image-column img {
+            max-width: 230px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .print-data {
+    white-space: pre-wrap;
+    margin-bottom: 5px;
+}
+
+.print-data-item {
+    margin-bottom: 3px;
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.print-image {
+    max-width: 60px;
+    margin-bottom: 3px;
+    border-radius: 5px;
+}
+
+.custom-text {
+    margin-top: 5px;
+    font-style: italic;
+}
+@media screen and (max-width: 700px) {
+            table {
+                width: 100%; /* Устанавливаем ширину таблицы в 100% на маленьких экранах */
+            }
+
+            .image-column img {
+                max-width: 50px; /* Уменьшаем максимальную ширину изображений */
+            }
+
+            .print-image {
+                max-width: 30px; /* Уменьшаем максимальную ширину изображений в печатных данных */
+            }
+
+            .custom-text {
+                font-size: 0.8vmin; /* Уменьшаем размер шрифта для итальянского текста */
+            }
+        }
+        .alert {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.alert-success {
+    background-color: #DFF2BF;
+    color: #4F8A10;
+}
+
+.alert-error {
+    background-color: #F2DEDE;
+    color: #D8000C;
+}
+    </style>
+</head>
+<body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+    <h1>Order Information</h1>
+
+    <table>
+        <tr>
+            <th>Order Number</th>
+            <th>Model</th>
+            <th>Size</th>
+            <th>Print Data</th>
+            <th class="image-column">Front Image</th>
+            <th class="image-column">Back Image</th>
+        </tr>
+
+        <tr>
+            <td>{{ task_data.order_id }}</td>
+            <td>{{ task_data.model }}</td>
+            <td>{{ task_data.size }}</td>
+            <td class="print-data">
+                {% for key, value in task_data.print_data.items() %}
+                    {% if key == 'print' %}
+                    {% set imageUrl = value %}
+                    {% set orderNumber = imageUrl.split('image_')[-1].split('.')[0] %}
+                        <div class="print-data-item">
+                            <span class="label">Print:</span>
+                            <img src="{{ imageUrl  }}" alt="Print Image" class="print-image">
+                        </div>
+                        <div class="print-data-item">
+                            <span class="label">Printing number:</span>
+                            {{ orderNumber }}
+                        </div>
+                    {% elif key == 'side' %}
+                        <div class="print-data-item">
+                            <span class="label">Side:</span>
+                            {{ value }}
+                        </div>
+                    {% elif key == 'rotationAngle' %}
+                        <div class="print-data-item">
+                            <span class="label">Rotation Angle:</span>
+                            {{ value }}
+                        </div>
+                    {% elif key == 'rectCoordinates' %}
+                        <div class="print-data-item">
+                            <span class="label">Rect Coordinates:</span>
+                            Left - {{ value.left }},
+                            Top - {{ value.top }},
+                            Width - {{ value.width }},
+                            Height - {{ value.height }}
+                        </div>
+                    {% elif key == 'customText' %}
+                        {% if value %}
+                            <div class="print-data-item custom-text">
+                                <span class="label">Custom Text:</span>
+                                {{ value.text }}
+                            </div>
+                            <div class="print-data-item custom-text">
+                                <span class="label">Font Family:</span>
+                                {{ value.fontFamily }},
+                                <span class="label">Text Color:</span>
+                                {{ value.textColor }}
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </td>
+            <td class="image-column"><img src="{{ task_data.front_image }}" alt="Front Image"></td>
+            <td class="image-column"><img src="{{ task_data.back_image }}" alt="Back Image"></td>
+        </tr>
+    </table>
+
+    <div class="button-container">
+        <form action="{{ url_for('complete_task', order_id=task_data.order_id) }}" method="post">
+            <button type="submit">Order Completed</button>
+        </form>
+    </div>
+
+    <div id="success-message" class="alert alert-success" style="display: none;"></div>
+    <div id="error-message" class="alert alert-error" style="display: none;"></div>
+</body>
+
+
+<script>
+    window.onload = function () {
+           var startTime = new Date().getTime();
+           var timerInterval;
+   
+           function updateTimer() {
+               var currentTime = new Date().getTime();
+               var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+   
+               var remainingMinutes = Math.floor((elapsedSeconds) / 60);
+               var remainingSeconds = (elapsedSeconds) % 60;
+   
+               console.log('Прошло времени: ' + remainingMinutes + ' минут ' + remainingSeconds + ' секунд');
+           }
+   
+           // Запуск таймера каждую секунду
+           timerInterval = setInterval(updateTimer, 1000);
+   
+           // Обработка события beforeunload
+           window.addEventListener('beforeunload', function (event) {
+               clearInterval(timerInterval); // Остановка таймера перед выгрузкой страницы
+   
+               // Отправка времени на сервер с использованием AJAX
+               var currentTime = new Date().getTime();
+               var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+   
+               fetch('/update_working_hours', {
+                   method: 'POST',
+                   headers: {
+                       'Content-Type': 'application/json',
+                   },
+                   body: JSON.stringify({ elapsedSeconds: elapsedSeconds }),
+               })
+                   .then(response => {
+                       if (!response.ok) {
+                           console.error('Failed to update working hours.');
+                       }
+                   })
+                   .catch(error => {
+                       console.error('Error:', error);
+                   });
+           });
+       };
+    </script>
+</html>

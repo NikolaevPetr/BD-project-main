@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Your Model</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        {% if available_models|length == 1 %}
+            <form id="autoSubmitForm" method="post" action="{{ url_for('customize_product') }}"  id="modelForm">
+                <input type="hidden" name="selected_model" value="{{ available_models[0].name }}">
+                <input type="hidden" name="auto_submit" value="true">
+            </form>
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    document.getElementById("autoSubmitForm").submit();
+                });
+            </script>
+        {% else %}
+            <h1>Select Your {{ selected_product|capitalize }} Model</h1>
+            <form method="post" action="{{ url_for('customize_product') }}" id="modelForm" autocomplete="off">
+                <div class="model-list">
+                    {% for model in available_models %}
+                        <label class="model">
+                            <input type="radio" name="selected_model" value="{{ model.name }}" {% if model.is_sold_out %}disabled{% endif %}>
+                            <div class="model-images">
+                                <img src="{{ model.image }}" alt="{{ model.name }}" class="front-image">
+                                <img src="{{ model.back_image }}" alt="{{ model.name }}" class="back-image">
+                            </div>
+                            <div class="model-details">
+                                {% if model.is_sold_out %}
+                                    <!-- Перечеркиваем название модели, если не существует -->
+                                    <p><strike>{{ model.name }} (нет в наличии)</strike></p>
+                                {% else %}
+                                    <p>{{ model.name|replace("_", " ") }}</p>
+                                {% endif %}
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" id="nextButton">Next</button>
+            </form>
+            <a href="javascript:void(0);" id="prevButton">Prev</a>
+        {% endif %}
+    </div>
+</body>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Сохраняем выбранную модель при изменении значения в радиокнопке
+        document.getElementById('modelForm').addEventListener('change', function(event) {
+            var selectedModel = event.target.value;
+            localStorage.setItem('selectedModel', selectedModel);
+        });
+
+        var selectedModel = localStorage.getItem('selectedModel');
+        var radioButtons = document.getElementsByName('selected_model');
+        for(var i = 0; i < radioButtons.length; i++) {
+            if(radioButtons[i].value === selectedModel) {
+                radioButtons[i].checked = true;
+            }
+        }
+
+        // Обработчик для кнопки "Prev"
+        document.getElementById("prevButton").addEventListener("click", function(event) {
+            event.preventDefault(); // Отменяем стандартное поведение ссылки
+            window.history.back(); // Возврат на предыдущую страницу
+        });
+
+        // Добавляем обработчик события отправки формы
+        var form = document.querySelector('form');
+        form.addEventListener('submit', function(event) {
+            var selectedProduct = document.querySelector('input[name="selected_model"]:checked');
+
+            if (!selectedProduct) {
+                alert('Please select a model before proceeding.');
+                event.preventDefault();  // Останавливаем отправку формы
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_background_data')  // Запрос к серверу для получения данных о фоне
+        .then(response => response.json())
+        .then(data => {
+            if (data.backgroundImage) {
+                updateTextColorAndBackground(data.backgroundImage);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    function updateTextColorAndBackground(imageSource) {
+    var img = new Image();
+    img.src = imageSource;
+
+    img.onload = function() {
+        applyTextColorBasedOnBackground(img);
+        document.body.style.backgroundImage = `url(${imageSource})`;
+        document.body.style.backgroundSize = '100% 100%'; // Растягиваем изображение на весь экран
+        document.body.style.backgroundRepeat = 'no-repeat';
+        document.body.style.backgroundAttachment = 'fixed'; // Зафиксируем изображение
+    };
+}
+
+    function applyTextColorBasedOnBackground(img) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var elements = [document.querySelector('h1'), document.querySelector('h2'), document.querySelector('h3')];
+        elements.forEach(function(element) {
+            if (element) {
+                var rect = element.getBoundingClientRect();
+                var x = rect.left + window.scrollX;
+                var y = rect.top + window.scrollY;
+                var pixel = ctx.getImageData(x, y, 1, 1).data;
+                var hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                element.style.color = getContrastYIQ(hex);
+            }
+        });
+    }
+
+    function rgbToHex(r, g, b) {
+        return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    function getContrastYIQ(hexcolor){
+        var r = parseInt(hexcolor.substr(1,2),16);
+        var g = parseInt(hexcolor.substr(3,2),16);
+        var b = parseInt(hexcolor.substr(5,2),16);
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    }
+    </script>        
+</html>
