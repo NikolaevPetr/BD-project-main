@@ -13,9 +13,9 @@ from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
-app.secret_key = 'FOLOM'
+app.secret_key = 'NEOVS'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Fav2171186689@localhost/print_shop'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Neov2171186689@localhost/print_shop'
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
